@@ -18,6 +18,16 @@
 				"$vitest"
 			],
 			"group": "test"
+		},
+		{
+			"label": "Run runtime tests",
+			"type": "shell",
+			"command": "npm run -w runtime test --silent",
+			"isBackground": false,
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "test"
 		}
 	]
 }

@@ -12,7 +12,9 @@ import { Logger } from '../utils/logger.js';
 import chalk from 'chalk';
 import fs from 'fs/promises';
 import path from 'path';
-import prompts from 'prompts';
+import { render } from 'ink';
+import React from 'react';
+import { InteractiveApp } from './ui/InteractiveApp.js';
 
 const program = new Command();
 
@@ -112,168 +114,8 @@ program
       process.exit(2);
     }
 
-    // State to enable looping until Ctrl+C
-    let shouldExit = false;
-    const onCancel = () => {
-      // prompts will abort current question; we mark exit and let loop break
-      shouldExit = true;
-      return true;
-    };
-
-    // Remember last selections to preselect next time
-    let lastSelectedIndex = 0;
-    let lastCustomPath: string | undefined;
-    let lastPromptInput: string | undefined;
-
-    const cwd = process.cwd();
-
-    // Also handle raw SIGINT to exit between prompts or during execution
-    const sigintHandler = () => {
-      shouldExit = true;
-      // Add a newline to keep UI clean if ^C is pressed mid-line
-      process.stdout.write('\n');
-    };
-    process.on('SIGINT', sigintHandler);
-
-    try {
-      // Main interactive loop
-      // eslint-disable-next-line no-constant-condition
-      while (true) {
-        if (shouldExit) break;
-
-        // Find pipelines on each iteration to reflect new files
-        const found = await findPipelineFiles(cwd);
-        type PipelineChoice = { title: string; value: string };
-        const choices: PipelineChoice[] = [
-          ...found.map((abs) => ({ title: path.relative(cwd, abs) || abs, value: abs } as PipelineChoice)),
-          { title: 'Enter custom path…', value: '__custom__' }
-        ];
-
-        // Guard: no choices at all (very unlikely since we always include custom)
-        if (choices.length === 0) {
-          console.log(chalk.yellow('No pipeline files found. Press Ctrl+C to exit.'));
-          await new Promise((r) => setTimeout(r, 1000));
-          continue;
-        }
-
-        const pipelineAnswer = await prompts(
-          {
-            type: 'select',
-            name: 'pipeline',
-            message: 'Select a pipeline file',
-            choices,
-            initial: Math.min(Math.max(lastSelectedIndex, 0), choices.length - 1)
-          },
-          { onCancel }
-        );
-        if (shouldExit) break;
-
-        let selected = pipelineAnswer.pipeline as string | undefined;
-        if (!selected) {
-          // If user just hit enter and there are no answers, fallback to last index
-          selected = choices[Math.min(Math.max(lastSelectedIndex, 0), choices.length - 1)].value;
-        }
-
-        // Persist selection index for next loop
-        lastSelectedIndex = choices.findIndex((c) => c.value === selected);
-        if (lastSelectedIndex < 0) lastSelectedIndex = 0;
-
-        // Handle custom path entry
-        if (selected === '__custom__') {
-          const custom = await prompts(
-            {
-              type: 'text',
-              name: 'path',
-              message: 'Enter path to pipeline YAML',
-              initial: lastCustomPath,
-              validate: (input: string) => (input?.trim().length ? true : 'Path is required')
-            },
-            { onCancel }
-          );
-          if (shouldExit) break;
-          lastCustomPath = (custom.path as string)?.trim();
-          selected = resolve(cwd, lastCustomPath || '');
-          // Update lastSelectedIndex to point at custom item
-          lastSelectedIndex = choices.length - 1;
-        }
-
-        const pipelinePath = resolve(cwd, selected!);
-        const exists = await fs
-          .stat(pipelinePath)
-          .then((s) => s.isFile())
-          .catch(() => false);
-        if (!exists) {
-          console.error(chalk.red(`Pipeline not found: ${pipelinePath}`));
-          // Brief pause so the message is visible, then continue loop
-          await new Promise((r) => setTimeout(r, 500));
-          continue;
-        }
-
-        // Load pipeline to determine if any variables are required (e.g. {{prompt}})
-        const logger = new Logger(false);
-        try {
-          logger.loading(`Loading pipeline: ${pipelinePath}`);
-          const parser = new PipelineParser();
-          const pipeline = await parser.loadFromFile(pipelinePath);
-          logger.info('Pipeline validated successfully');
-
-          // Detect whether the pipeline template strings reference {{prompt}}
-          const pipelineNeedsPrompt = (() => {
-            const containsPromptVar = (val: any): boolean => {
-              if (typeof val === 'string') return val.includes('{{prompt}}');
-              if (Array.isArray(val)) return val.some(containsPromptVar);
-              if (val && typeof val === 'object') return Object.values(val).some(containsPromptVar);
-              return false;
-            };
-            return containsPromptVar(pipeline);
-          })();
-
-          let userPrompt: string | undefined = lastPromptInput;
-          if (pipelineNeedsPrompt) {
-            const ans = await prompts(
-              {
-                type: 'text',
-                name: 'prompt',
-                message: 'Enter prompt (required by this pipeline)',
-                initial: lastPromptInput,
-                validate: (input: string) => (input?.trim().length ? true : 'Prompt is required')
-              },
-              { onCancel }
-            );
-            if (shouldExit) break;
-            userPrompt = (ans.prompt as string)?.trim();
-            lastPromptInput = userPrompt;
-          } else {
-            // Clear last prompt if pipeline doesn't require one
-            userPrompt = undefined;
-          }
-
-          const executor = new PipelineExecutor(process.env.ANTHROPIC_API_KEY, logger);
-          const context = {
-            workingDirectory: process.cwd(),
-            environment: {},
-            userPrompt,
-            verbose: false
-          };
-
-          const result = await executor.execute(pipeline, context);
-          // Print result summary and loop again without exiting
-          console.log(result.success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed'));
-          // Small separator for readability
-          console.log();
-          // Continue loop; last selection stays preselected so Enter reruns
-          continue;
-        } catch (error: any) {
-          const logger2 = new Logger(false);
-          logger2.error(error.message, error.stack);
-          // Continue the loop to allow trying again
-          continue;
-        }
-      }
-    } finally {
-      process.off('SIGINT', sigintHandler);
-      console.log(chalk.yellow('Exiting interactive mode.'));
-    }
+    const {waitUntilExit} = render(React.createElement(InteractiveApp));
+    await waitUntilExit();
   });
 
 program
