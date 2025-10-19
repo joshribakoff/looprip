@@ -12,15 +12,18 @@ npm run build
 
 ## Usage
 
-### Interactive mode
+### Interactive mode (default locally)
 
-Arrow-key through commands and pick a pipeline file discovered in your workspace.
+If you're in a TTY and not in CI (CI env var not truthy), the CLI starts interactive mode by default: select a pipeline and it runs immediately. It only prompts for variables your pipeline requires (like `{{prompt}}`).
 
 ```bash
 # From repo root
-npx tsx src/cli/index.js interactive
+npx tsx src/cli/index.js
 
 # Or if installed globally as a binary
+agent-pipeline
+
+# You can still invoke interactive explicitly
 agent-pipeline interactive
 ```
 

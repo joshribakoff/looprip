@@ -1,0 +1,3 @@
+How can we avoid `./p` and make it just `p` to run the cmd?
+
+If necessary, we can write a bash script or something that the user runs once to install it on their path. 

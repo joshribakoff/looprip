@@ -104,7 +104,7 @@ async function findPipelineFiles(baseDir: string): Promise<string[]> {
 // Interactive mode: pick command, then pick pipeline, then execute
 program
   .command('interactive')
-  .description('Run in interactive mode to select a subcommand and pipeline file')
+  .description('Interactive mode: pick a pipeline and run it')
   .action(async () => {
     // If the terminal is non-interactive, bail out
     if (!process.stdout.isTTY || !process.stdin.isTTY) {
@@ -116,22 +116,6 @@ program
       console.log(chalk.yellow('Cancelled.'));
       process.exit(0);
     };
-
-    const commandAnswer = await prompts(
-      {
-        type: 'select',
-        name: 'cmd',
-        message: 'What do you want to do?',
-        choices: [
-          { title: 'Run a pipeline', value: 'run' },
-          { title: 'Validate a pipeline', value: 'validate' }
-        ],
-        initial: 0
-      },
-      { onCancel }
-    );
-
-    const cmd = commandAnswer.cmd as 'run' | 'validate';
 
     const cwd = process.cwd();
     const found = await findPipelineFiles(cwd);
@@ -177,84 +161,53 @@ program
       process.exit(1);
     }
 
-    let verbose = false;
-    let userPrompt: string | undefined;
-    if (cmd === 'run') {
-      const extra = await prompts(
-        [
-          {
-            type: 'toggle',
-            name: 'verbose',
-            message: 'Verbose output?',
-            initial: false,
-            active: 'yes',
-            inactive: 'no'
-          },
+    // Load pipeline to determine if any variables are required (e.g. {{prompt}})
+    const logger = new Logger(false);
+    try {
+      logger.loading(`Loading pipeline: ${absolutePath}`);
+      const parser = new PipelineParser();
+      const pipeline = await parser.loadFromFile(absolutePath);
+      logger.info('Pipeline validated successfully');
+
+      // Detect whether the pipeline template strings reference {{prompt}}
+      const pipelineNeedsPrompt = (() => {
+        const containsPromptVar = (val: any): boolean => {
+          if (typeof val === 'string') return val.includes('{{prompt}}');
+          if (Array.isArray(val)) return val.some(containsPromptVar);
+          if (val && typeof val === 'object') return Object.values(val).some(containsPromptVar);
+          return false;
+        };
+        return containsPromptVar(pipeline);
+      })();
+
+      let userPrompt: string | undefined;
+      if (pipelineNeedsPrompt) {
+        const ans = await prompts(
           {
             type: 'text',
             name: 'prompt',
-            message: 'Optional user prompt for agent nodes (press Enter to skip)',
-            initial: ''
-          }
-        ],
-        { onCancel }
-      );
-      verbose = !!extra.verbose;
-      userPrompt = (extra.prompt as string)?.trim() || undefined;
-    }
+            message: 'Enter prompt (required by this pipeline)',
+            validate: (input: string) => (input?.trim().length ? true : 'Prompt is required')
+          },
+          { onCancel }
+        );
+        userPrompt = (ans.prompt as string)?.trim();
+      }
 
-    // Execute selected command using existing logic
-    if (cmd === 'validate') {
-      const logger = new Logger(true);
-      try {
-        logger.validationStart(absolutePath);
-        const parser = new PipelineParser();
-        const pipeline = await parser.loadFromFile(absolutePath);
-        logger.validationSuccess();
-        console.log(chalk.bold('Pipeline Structure:'));
-        logger.validationInfo('Name', pipeline.name || 'Unnamed');
-        logger.validationInfo('Description', pipeline.description || 'None');
-        logger.validationInfo('Nodes', pipeline.nodes.length.toString());
-        for (const node of pipeline.nodes) {
-          const details: string[] = [];
-          if (node.description) details.push(`Description: ${node.description}`);
-          if (node.type === 'task') {
-            details.push(`Command: ${node.command}`);
-          } else if (node.type === 'agent') {
-            details.push(`Tools: ${node.tools.join(', ')}`);
-            details.push(`Output Schema: ${node.output_schema}`);
-          } else if (node.type === 'gate') {
-            details.push(`Command: ${node.command}`);
-          }
-          logger.validationNode(node.id, node.type, details);
-        }
-        process.exit(0);
-      } catch (error: any) {
-        const logger2 = new Logger(true);
-        logger2.error('Validation failed', error.message);
-        process.exit(1);
-      }
-    } else {
-      const logger = new Logger(verbose);
-      try {
-        logger.loading(`Loading pipeline: ${absolutePath}`);
-        const parser = new PipelineParser();
-        const pipeline = await parser.loadFromFile(absolutePath);
-        logger.info('Pipeline validated successfully');
-        const executor = new PipelineExecutor(process.env.ANTHROPIC_API_KEY, logger);
-        const context = {
-          workingDirectory: process.cwd(),
-          environment: {},
-          userPrompt,
-          verbose
-        };
-        const result = await executor.execute(pipeline, context);
-        process.exit(result.success ? 0 : 1);
-      } catch (error: any) {
-        const logger2 = new Logger(verbose);
-        logger2.error(error.message, error.stack);
-        process.exit(1);
-      }
+      const executor = new PipelineExecutor(process.env.ANTHROPIC_API_KEY, logger);
+      const context = {
+        workingDirectory: process.cwd(),
+        environment: {},
+        userPrompt,
+        verbose: false
+      };
+
+      const result = await executor.execute(pipeline, context);
+      process.exit(result.success ? 0 : 1);
+    } catch (error: any) {
+      const logger2 = new Logger(false);
+      logger2.error(error.message, error.stack);
+      process.exit(1);
     }
   });
 
@@ -305,4 +258,15 @@ program
     }
   });
 
-program.parse();
+// Default behavior: if no subcommand is provided and we're in a TTY and not CI,
+// automatically enter interactive mode. Otherwise, use standard parsing.
+const isCI = !!process.env.CI && String(process.env.CI).toLowerCase() !== 'false' && String(process.env.CI) !== '0';
+
+const hasSubcommand = process.argv.length > 2;
+
+if (!hasSubcommand && process.stdout.isTTY && process.stdin.isTTY && !isCI) {
+  // Inject the interactive command
+  await program.parseAsync([process.argv[0], process.argv[1], 'interactive']);
+} else {
+  program.parse();
+}
