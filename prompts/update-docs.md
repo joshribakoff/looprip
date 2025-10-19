@@ -2,7 +2,9 @@
 status: draft
 ---
 
-Update the docs/ folder with new content, heres a draft, but I want you to rewrite this:
+Update the docs/ folder with new content, heres a draft, but I want you to rewrite it. Also make sure you search around and find the best place to put it, and don't just put it into an arbitrary file. 
+
+----
 
 The documentation currently focuses on how this system avoids the downsides of traditional AI workflows — like runaway loops, lack of transparency, or excessive token costs.
 
