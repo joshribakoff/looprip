@@ -10,7 +10,9 @@
   "scripts": {
     "build": "./scripts/build.sh",
     "test": "npm --prefix runtime test -- --run",
-    "test:all": "./test.sh",
+    "test:unit": "npm --prefix runtime run test:unit",
+    "test:integration": "npm run build && npm --prefix runtime run test:integration",
+    "test:all": "npm run build && npm --prefix runtime run test:all",
     "clean": "cd runtime && npm run clean",
     "p": "./p",
     "install:cli": "bash ./scripts/install.sh",
