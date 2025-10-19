@@ -2,8 +2,8 @@
  * Tool definitions for agent nodes
  */
 
-import { readFile, writeFile, readdir, stat } from 'fs/promises';
-import { join, relative } from 'path';
+import { readFile, writeFile, readdir } from 'fs/promises';
+import { join } from 'path';
 import { ToolDefinition, ExecutionContext } from '../types/index.js';
 
 export const FILE_LIST_TOOL: ToolDefinition = {

@@ -26,7 +26,7 @@ export class AgentExecutor implements NodeExecutor {
   async execute(
     node: AgentNode,
     state: PipelineState,
-    context: ExecutionContext
+    _context: ExecutionContext
   ): Promise<NodeOutput> {
     const startTime = Date.now();
     
@@ -44,7 +44,7 @@ export class AgentExecutor implements NodeExecutor {
       this.logger.agentTools(tools.map(t => t.name));
       
       // Build the system prompt
-      const systemPrompt = this.buildSystemPrompt(node, outputSchema, context);
+      const systemPrompt = this.buildSystemPrompt(node, outputSchema);
       
       // Run the agent
       const result = await this.runAgent(
@@ -52,7 +52,7 @@ export class AgentExecutor implements NodeExecutor {
         systemPrompt,
         tools,
         outputSchema,
-        context
+        _context
       );
       
       const endTime = Date.now();
@@ -83,10 +83,9 @@ export class AgentExecutor implements NodeExecutor {
 
   private buildSystemPrompt(
     node: AgentNode,
-    outputSchema: any,
-    context: ExecutionContext
+    outputSchema: any
   ): string {
-    let prompt = `You are an AI agent executing a task as part of an automated pipeline.
+    const prompt = `You are an AI agent executing a task as part of an automated pipeline.
 
 Your role: ${node.description || 'Execute the user\'s request'}
 

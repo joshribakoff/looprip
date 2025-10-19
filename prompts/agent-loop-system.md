@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 # Agent Loop System Prompt
 
 You are a coding agent running inside a local runtime.

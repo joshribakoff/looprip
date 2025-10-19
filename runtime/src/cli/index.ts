@@ -10,7 +10,6 @@ import { PipelineParser } from '../core/parser.js';
 import { PipelineExecutor } from '../executors/index.js';
 import { Logger } from '../utils/logger.js';
 import { bold, dim, gray, green, red, yellow } from '../utils/terminalStyles.js';
-import fs from 'fs/promises';
 import path from 'path';
 import { render } from 'ink';
 import React from 'react';
@@ -105,32 +104,7 @@ promptCmd
     console.log(path.resolve(filePath));
   });
 
-// Helper: recursively find pipeline files (pipeline.yaml|yml) under cwd
-async function findPipelineFiles(baseDir: string): Promise<string[]> {
-  const results: string[] = [];
-  async function walk(dir: string) {
-    let entries;
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      return; // ignore unreadable dirs
-    }
-    await Promise.all(entries.map(async (entry) => {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        // Skip node_modules and dist for speed
-        if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') return;
-        await walk(full);
-      } else if (entry.isFile()) {
-        if (/^pipeline\.ya?ml$/i.test(entry.name)) {
-          results.push(full);
-        }
-      }
-    }));
-  }
-  await walk(baseDir);
-  return results.sort();
-}
+// (removed unused helper findPipelineFiles)
 
 // Interactive mode: pick command, then pick pipeline, then execute
 program

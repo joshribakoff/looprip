@@ -66,19 +66,19 @@ function resolveRepoRoot(): string {
   let current = process.cwd();
   let lastPackageDir: string | null = null;
 
-  while (true) {
+  // Walk up the directory tree until we reach the filesystem root
+  let prev: string;
+  do {
     const pkgPath = path.join(current, 'package.json');
     if (existsSync(pkgPath)) {
       lastPackageDir = current;
     }
 
-    const parent = path.dirname(current);
-    if (parent === current) {
-      return lastPackageDir ?? process.cwd();
-    }
+    prev = current;
+    current = path.dirname(current);
+  } while (current !== prev);
 
-    current = parent;
-  }
+  return lastPackageDir ?? process.cwd();
 }
 
 const repoRoot = resolveRepoRoot();
