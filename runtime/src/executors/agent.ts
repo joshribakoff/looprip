@@ -110,7 +110,7 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
     maxIterations: number = 10
   ): Promise<any> {
     const messages: Anthropic.MessageParam[] = [
-      { role: 'user', content: userPrompt }
+      { role: 'user', content: [{ type: 'text', text: userPrompt }] }
     ];
     
     const anthropicTools: Anthropic.Tool[] = tools.map(tool => ({
@@ -118,6 +118,9 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
       description: tool.description,
       input_schema: tool.inputSchema
     }));
+
+    const maxJsonRetries = 3;
+    let jsonRetryCount = 0;
 
     for (let i = 0; i < maxIterations; i++) {
       const response = await this.anthropic.messages.create({
@@ -132,18 +135,39 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
 
       // Process the response
       if (response.stop_reason === 'end_turn') {
+        messages.push({ role: 'assistant', content: response.content });
+
         // Agent finished - extract the final answer
         const textContent = response.content.find(c => c.type === 'text');
         if (textContent && textContent.type === 'text') {
-          const result = this.extractJson(textContent.text);
-          
-          // Validate against schema
-          const validation = outputSchema.validate(result);
-          if (!validation.valid) {
-            throw new Error(`Agent output doesn't match schema: ${validation.errors?.join(', ')}`);
+          try {
+            const result = this.extractJson(textContent.text);
+            
+            // Validate against schema
+            const validation = outputSchema.validate(result);
+            if (!validation.valid) {
+              throw new Error(`Agent output doesn't match schema: ${validation.errors?.join(', ')}`);
+            }
+            
+            return result;
+          } catch (error: any) {
+            jsonRetryCount += 1;
+            this.logger.agentJsonRetry(error.message, jsonRetryCount, maxJsonRetries);
+            
+            if (jsonRetryCount >= maxJsonRetries) {
+              throw new Error(`Agent failed to produce valid JSON after ${jsonRetryCount} attempt${jsonRetryCount === 1 ? '' : 's'}: ${error.message}`);
+            }
+
+            messages.push({
+              role: 'user',
+              content: [{
+                type: 'text',
+                text: `The previous response could not be parsed as valid JSON (${error.message}). Please reply again with ONLY valid JSON that matches the provided schema.`
+              }]
+            });
+            
+            continue;
           }
-          
-          return result;
         }
         throw new Error('Agent finished without providing output');
       }

@@ -106,17 +106,58 @@ export class Logger {
     }
   }
 
-  agentToolCall(toolName: string, _input?: any) {
-    void _input;
-    if (this.verbose) {
-      console.log(blue('│  ') + magenta('🔧 Tool: ') + white(toolName));
+  agentToolCall(toolName: string, input?: any) {
+    if (!this.verbose) {
+      return;
     }
+
+    let detail = '';
+    if (input && typeof input === 'object') {
+      const path = typeof input.path === 'string' ? input.path : typeof input.file_path === 'string' ? input.file_path : undefined;
+      if (path) {
+        detail = gray(` (${path})`);
+      } else {
+        const keys = Object.keys(input).filter(key => key !== 'content');
+        if (keys.length > 0) {
+          detail = gray(` (${keys.join(', ')})`);
+        }
+      }
+    }
+
+    console.log(blue('│  ') + magenta('🔧 Tool: ') + white(toolName) + detail);
   }
 
   agentToolResult(result: any) {
+    if (!this.verbose) {
+      return;
+    }
+
+    if (result && typeof result === 'object' && !Array.isArray(result)) {
+      if (typeof result.content === 'string') {
+        console.log(blue('│  ') + dim('   Result: ') + gray(`content length ${result.content.length}`));
+        return;
+      }
+
+      if ('success' in result && typeof result.success === 'boolean' && Object.keys(result).length === 1) {
+        console.log(blue('│  ') + dim('   Result: ') + gray(result.success ? 'success' : 'failed'));
+        return;
+      }
+    }
+
+    const serialized = JSON.stringify(result);
+    if (typeof serialized === 'string') {
+      const preview = serialized.slice(0, 100);
+      console.log(blue('│  ') + dim('   Result: ') + gray(preview + (serialized.length > 100 ? '...' : '')));
+    } else {
+      console.log(blue('│  ') + dim('   Result: ') + gray(String(result)));
+    }
+  }
+
+  agentJsonRetry(error: string, attempt: number, max: number) {
     if (this.verbose) {
-      const preview = JSON.stringify(result).slice(0, 100);
-      console.log(blue('│  ') + dim('   Result: ') + gray(preview + (JSON.stringify(result).length > 100 ? '...' : '')));
+      console.log(blue('│  ') + yellow(`Invalid JSON, retry ${attempt}/${max}`) + (error ? gray(` (${error})`) : ''));
+    } else {
+      console.log(blue('│  ') + yellow(`Invalid JSON, retry ${attempt}/${max}`));
     }
   }
 
