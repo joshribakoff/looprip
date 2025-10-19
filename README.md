@@ -63,6 +63,7 @@ p run pipeline.yaml --api-key sk-...
 - Examples: `examples/`
 - Docs site sources: `docs/`
 - Runtime details: `runtime/README.md`
+ - Co-pilot instructions: `agents.md`
 
 ## License
 
