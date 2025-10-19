@@ -10,6 +10,7 @@ import {Logger} from '../../utils/logger.js';
 import { createPrompt } from '../createPrompt.js';
 import SelectScreen from './screens/SelectScreen.js';
 import StatusScreen from './screens/StatusScreen.js';
+import CustomPathScreen from './screens/CustomPathScreen.js';
 
 type PipelineChoice = { title: string; value: string };
 
@@ -244,24 +245,16 @@ export function InteractiveApp() {
 
   if (mode === 'custom-path') {
     return (
-      <Box flexDirection="column">
-        {header}
-        <Box marginTop={1}>
-          <Text>Enter path to pipeline YAML: </Text>
-          <TextInput
-            value={customPath}
-            onChange={setCustomPath}
-            onSubmit={(val: string) => {
-              const abs = path.resolve(cwd, val.trim());
-              setCustomPath('');
-              void runPipeline(abs);
-            }}
-          />
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>Esc: back</Text>
-        </Box>
-      </Box>
+      <CustomPathScreen
+        header={header}
+        value={customPath}
+        onChange={setCustomPath}
+        onSubmit={(val: string) => {
+          const abs = path.resolve(cwd, val.trim());
+          setCustomPath('');
+          void runPipeline(abs);
+        }}
+      />
     );
   }
 
