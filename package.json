@@ -1,0 +1,12 @@
+{
+  "name": "agent-pipeline",
+  "version": "0.1.0",
+  "description": "Agent Pipeline System - Build AI-powered workflows",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "./scripts/build.sh",
+    "test": "./test.sh",
+    "clean": "cd runtime && npm run clean"
+  }
+}

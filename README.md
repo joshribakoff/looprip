@@ -5,16 +5,10 @@ A runtime for executing agentic pipelines defined in YAML. Build AI-powered work
 ## Quick Start
 
 ```bash
-# Install and build
-cd runtime
-npm install
+# Build and setup (one command does everything)
 npm run build
 
-# Link the CLI globally (makes 'agent-pipeline' command available)
-npm link
-
-# Run a pipeline from the project root
-cd ..
+# Run a pipeline
 agent-pipeline run examples/simple-task-test/pipeline.yaml
 
 # Run with a prompt for agent nodes
@@ -110,16 +104,14 @@ Agents produce structured output validated against defined schemas. See examples
 ## Development
 
 ```bash
-# Build the runtime
-cd runtime
-npm install
+# Build everything
 npm run build
 
 # Run tests
 npm test
 
 # Watch mode for development
-npm run dev
+cd runtime && npm run dev
 ```
 
 ## Testing
@@ -127,7 +119,6 @@ npm run dev
 The project includes comprehensive tests:
 
 ```bash
-cd runtime
 npm test
 ```
 

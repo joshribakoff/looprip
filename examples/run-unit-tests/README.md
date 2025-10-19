@@ -11,8 +11,12 @@ This pipeline demonstrates dogfooding by using the agent-pipeline runtime to run
 From the root of the repository:
 
 ```bash
-# Build the runtime first
-cd runtime && npm run build && cd ..
+# Build and link the runtime (one-time setup)
+cd runtime
+npm install
+npm run build
+npm link
+cd ..
 
 # Run the pipeline
 agent-pipeline run examples/run-unit-tests/pipeline.yaml
