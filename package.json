@@ -9,7 +9,8 @@
   },
   "scripts": {
     "build": "./scripts/build.sh",
-    "test": "./test.sh",
+    "test": "npm --prefix runtime test -- --run",
+    "test:all": "./test.sh",
     "clean": "cd runtime && npm run clean",
     "lint": "(cd runtime && npm run lint:prompts && npm run lint)",
     "p": "./p",
