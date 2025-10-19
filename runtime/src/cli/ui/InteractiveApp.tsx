@@ -1,4 +1,4 @@
-import React, {useEffect, useState} from 'react';
+import React, {useEffect} from 'react';
 import {Box, Text, useInput, useApp, Spacer} from 'ink';
 import path from 'path';
 import fs from 'fs/promises';
@@ -13,6 +13,7 @@ import CreatePromptScreen from './screens/CreatePromptScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 import { useCreatePromptValidation } from './hooks/useCreatePromptValidation.js';
 import { usePipelineRunner } from './hooks/usePipelineRunner.js';
+import { UIProvider, useUiDispatch, useUiState, actions } from './state/uiStore.js';
 
 function detectNeedsPrompt(pipeline: any): boolean {
   const containsPromptVar = (val: any): boolean => {
@@ -24,9 +25,9 @@ function detectNeedsPrompt(pipeline: any): boolean {
   return containsPromptVar(pipeline);
 }
 
-type Mode = 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt';
+// Mode type is defined in the UI store; local alias removed
 
-export function InteractiveApp() {
+function AppInner() {
   const {exit} = useApp();
   const cwd = process.cwd();
   // Helper for .md normalization (mirrors CLI behavior)
@@ -34,13 +35,8 @@ export function InteractiveApp() {
     return fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`;
   }
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
-  const [index, setIndex] = useState(0);
-  const [mode, setMode] = useState<Mode>('select');
-  const [customPath, setCustomPath] = useState('');
-  const [userPrompt, setUserPrompt] = useState<string>('');
-  const [message, setMessage] = useState<string>('');
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
-  const [lastResultSuccess, setLastResultSuccess] = useState<boolean | null>(null);
+  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess } = useUiState();
+  const dispatch = useUiDispatch();
   const { executePipeline } = usePipelineRunner();
   // Create-prompt validation state moved into hook
   const { defaultPath, createPathInfo } = useCreatePromptValidation({
@@ -50,32 +46,32 @@ export function InteractiveApp() {
     ensureMd,
   });
   // Toast/notice shown when returning to the main menu
-  const [notice, setNotice] = useState<{ text: string; color?: 'green' | 'red' | 'yellow' } | null>(null);
+  const { notice } = useUiState();
 
   // Keep index in range when choices change
   useEffect(() => {
     if (index >= choices.length) {
-      setIndex(Math.max(0, choices.length - 1));
+      dispatch(actions.setIndex(Math.max(0, choices.length - 1)));
     }
-  }, [choices, index]);
+  }, [choices, index, dispatch]);
 
 
   // (validation effect now handled by useCreatePromptValidation)
 
   useInput((input: string, key: any) => {
     if (mode === 'select') {
-      if (key.upArrow) setIndex((i) => (i > 0 ? i - 1 : choices.length - 1));
-      else if (key.downArrow) setIndex((i) => (i + 1) % Math.max(choices.length || 1, 1));
+      if (key.upArrow) dispatch(actions.setIndex(index > 0 ? index - 1 : choices.length - 1));
+      else if (key.downArrow) dispatch(actions.setIndex((index + 1) % Math.max(choices.length || 1, 1)));
       else if (key.return) handleSelect();
       else if (input === 'r') void refreshChoices();
       else if (input === 'q' || key.escape) exit();
     } else if (mode === 'custom-path') {
-      if (key.escape) { setMode('select'); setCustomPath(''); }
+      if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setCustomPath('')); }
     } else if (mode === 'enter-prompt') {
-      if (key.escape) { setMode('select'); setUserPrompt(''); }
+      if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setUserPrompt('')); }
     } else if (mode === 'summary') {
       if (input === 'q' || key.escape) exit();
-      if (key.return) { setMode('select'); setLastResultSuccess(null); setMessage(''); }
+      if (key.return) { dispatch(actions.setMode('select')); dispatch(actions.setLastResult(null)); dispatch(actions.setMessage('')); }
     }
   });
 
@@ -83,11 +79,11 @@ export function InteractiveApp() {
     const choice = choices[index];
     if (!choice) return;
     if (choice.value === '__custom__') {
-      setMode('custom-path');
+      dispatch(actions.setMode('custom-path'));
       return;
     }
     if (choice.value === '__create_prompt__') {
-      setMode('create-prompt');
+      dispatch(actions.setMode('create-prompt'));
       return;
     }
     await runPipeline(choice.value);
@@ -96,36 +92,36 @@ export function InteractiveApp() {
   const runPipeline = async (selectedPath: string) => {
     const exists = await fs.stat(selectedPath).then((s) => s.isFile()).catch(() => false);
     if (!exists) {
-      setStatus('error');
-      setMessage(chalk.red(`Pipeline not found: ${selectedPath}`));
-      setMode('summary');
+      dispatch(actions.setStatus('error'));
+      dispatch(actions.setMessage(chalk.red(`Pipeline not found: ${selectedPath}`)));
+      dispatch(actions.setMode('summary'));
       return;
     }
     try {
-      setStatus('loading');
-      setMessage(chalk.gray(`Loading pipeline: ${selectedPath}`));
+      dispatch(actions.setStatus('loading'));
+      dispatch(actions.setMessage(chalk.gray(`Loading pipeline: ${selectedPath}`)));
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(selectedPath);
       const needsPrompt = detectNeedsPrompt(pipeline);
       if (needsPrompt && !userPrompt) {
         // Switch to prompt input first
-        setMode('enter-prompt');
+        dispatch(actions.setMode('enter-prompt'));
         // Stash selected path in message to re-use
-        setMessage(selectedPath);
-        setStatus('idle');
+        dispatch(actions.setMessage(selectedPath));
+        dispatch(actions.setStatus('idle'));
         return;
       }
-      setMode('running');
+      dispatch(actions.setMode('running'));
       const { success } = await executePipeline(pipeline, { cwd, userPrompt: userPrompt || undefined });
-      setLastResultSuccess(success);
-      setStatus(success ? 'success' : 'error');
-      setMessage(success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed'));
-      setMode('summary');
+      dispatch(actions.setLastResult(success));
+      dispatch(actions.setStatus(success ? 'success' : 'error'));
+      dispatch(actions.setMessage(success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed')));
+      dispatch(actions.setMode('summary'));
     } catch (err: any) {
-      setLastResultSuccess(false);
-      setStatus('error');
-      setMessage(chalk.red(err?.message || String(err)));
-      setMode('summary');
+      dispatch(actions.setLastResult(false));
+      dispatch(actions.setStatus('error'));
+      dispatch(actions.setMessage(chalk.red(err?.message || String(err))));
+      dispatch(actions.setMode('summary'));
     }
   };
 
@@ -135,7 +131,7 @@ export function InteractiveApp() {
     if (pathToRun) {
       await runPipeline(pathToRun);
     } else {
-      setMode('select');
+      dispatch(actions.setMode('select'));
     }
   };
 
@@ -154,7 +150,7 @@ export function InteractiveApp() {
         defaultPath={defaultPath}
         value={customPath}
         createPathInfo={createPathInfo}
-        onChange={setCustomPath}
+        onChange={(v: string) => dispatch(actions.setCustomPath(v))}
         onSubmit={async (val: string) => {
           const typed = (val.trim() || defaultPath);
           const normalized = ensureMd(typed);
@@ -166,9 +162,9 @@ export function InteractiveApp() {
           const result = await createPrompt({ cwd, input: normalized, openInEditor: true });
           const rel = path.relative(cwd, result.filePath) || result.filePath;
           const abs = path.resolve(result.filePath);
-          setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' });
-          setCustomPath('');
-          setMode('select');
+          dispatch(actions.setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' }));
+          dispatch(actions.setCustomPath(''));
+          dispatch(actions.setMode('select'));
         }}
       />
     );
@@ -179,10 +175,10 @@ export function InteractiveApp() {
       <CustomPathScreen
         header={header}
         value={customPath}
-        onChange={setCustomPath}
+        onChange={(v: string) => dispatch(actions.setCustomPath(v))}
         onSubmit={(val: string) => {
           const abs = path.resolve(cwd, val.trim());
-          setCustomPath('');
+          dispatch(actions.setCustomPath(''));
           void runPipeline(abs);
         }}
       />
@@ -194,7 +190,7 @@ export function InteractiveApp() {
       <EnterPromptScreen
         header={header}
         value={userPrompt}
-        onChange={setUserPrompt}
+        onChange={(v: string) => dispatch(actions.setUserPrompt(v))}
         onSubmit={() => onSubmitPrompt()}
       />
     );
@@ -215,5 +211,14 @@ export function InteractiveApp() {
   // Select mode
   return (
     <SelectScreen header={header} choices={choices} index={index} notice={notice} />
+  );
+}
+
+export function InteractiveApp() {
+  const cwd = process.cwd();
+  return (
+    <UIProvider cwd={cwd}>
+      <AppInner />
+    </UIProvider>
   );
 }
