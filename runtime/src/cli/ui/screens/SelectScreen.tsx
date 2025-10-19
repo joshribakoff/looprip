@@ -16,6 +16,9 @@ export function SelectScreen({ header, choices, index, notice }: Props) {
   return (
     <Box flexDirection="column">
       {header}
+      <Box marginTop={1}>
+        <Text bold>Select a pipeline to run:</Text>
+      </Box>
       {notice && (
         <Box marginTop={1}>
           <Text color={notice.color}>{notice.text}</Text>
@@ -34,7 +37,7 @@ export function SelectScreen({ header, choices, index, notice }: Props) {
         )}
       </Box>
       <Box marginTop={1}>
-        <Text dimColor>↑/↓: navigate • Enter: select • r: refresh • q: quit</Text>
+        <Text dimColor>↑/↓: navigate • Enter: select • r: refresh • q/Esc: back to main menu</Text>
       </Box>
     </Box>
   );

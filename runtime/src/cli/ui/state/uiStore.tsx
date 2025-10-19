@@ -1,7 +1,7 @@
 import React, {createContext, useContext, useReducer} from 'react';
 
 // Shared UI mode across screens
-export type Mode = 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt';
+export type Mode = 'main-menu' | 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt';
 
 export type Notice = { text: string; color?: 'green' | 'red' | 'yellow' } | null;
 
@@ -32,7 +32,7 @@ export type UIAction =
 export function createInitialState(params: { cwd: string }): UIState {
   return {
     cwd: params.cwd,
-    mode: 'select',
+    mode: 'main-menu',
     index: 0,
     customPath: '',
     userPrompt: '',

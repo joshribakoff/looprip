@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import chalk from 'chalk';
 import {PipelineParser} from '../../core/parser.js';
 import { createPrompt } from '../createPrompt.js';
+import MainMenuScreen, { MAIN_MENU_CHOICES } from './screens/MainMenuScreen.js';
 import SelectScreen from './screens/SelectScreen.js';
 import StatusScreen from './screens/StatusScreen.js';
 import CustomPathScreen from './screens/CustomPathScreen.js';
@@ -60,20 +61,38 @@ function AppInner() {
 
   // (validation effect now handled by useCreatePromptValidation)
 
+  const handleMainMenuSelect = () => {
+    const choice = MAIN_MENU_CHOICES[index];
+    if (!choice) return;
+    if (choice.value === 'quit') {
+      exit();
+    } else if (choice.value === 'run-pipeline') {
+      dispatch(actions.setMode('select'));
+      dispatch(actions.setIndex(0));
+    } else if (choice.value === 'create-prompt') {
+      dispatch(actions.setMode('create-prompt'));
+    }
+  };
+
   useInput((input: string, key: any) => {
-    if (mode === 'select') {
+    if (mode === 'main-menu') {
+      if (key.upArrow) dispatch(actions.setIndex(index > 0 ? index - 1 : MAIN_MENU_CHOICES.length - 1));
+      else if (key.downArrow) dispatch(actions.setIndex((index + 1) % MAIN_MENU_CHOICES.length));
+      else if (key.return) handleMainMenuSelect();
+      else if (input === 'q' || key.escape) exit();
+    } else if (mode === 'select') {
       if (key.upArrow) dispatch(actions.setIndex(index > 0 ? index - 1 : choices.length - 1));
       else if (key.downArrow) dispatch(actions.setIndex((index + 1) % Math.max(choices.length || 1, 1)));
       else if (key.return) handleSelect();
       else if (input === 'r') void refreshChoices();
-      else if (input === 'q' || key.escape) exit();
+      else if (input === 'q' || key.escape) { dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); }
     } else if (mode === 'custom-path') {
       if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setCustomPath('')); }
     } else if (mode === 'enter-prompt') {
       if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setUserPrompt('')); }
     } else if (mode === 'summary') {
       if (input === 'q' || key.escape) exit();
-      if (key.return) { dispatch(actions.setMode('select')); dispatch(actions.setLastResult(null)); dispatch(actions.setMessage('')); }
+      if (key.return) { dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); dispatch(actions.setLastResult(null)); dispatch(actions.setMessage('')); }
     }
   });
 
@@ -145,6 +164,12 @@ function AppInner() {
     </Box>
   );
 
+  if (mode === 'main-menu') {
+    return (
+      <MainMenuScreen header={header} index={index} notice={notice} />
+    );
+  }
+
   if (mode === 'create-prompt') {
     return (
       <CreatePromptScreen
@@ -153,7 +178,7 @@ function AppInner() {
         value={customPath}
         createPathInfo={createPathInfo}
         onChange={(v: string) => dispatch(actions.setCustomPath(v))}
-        onBack={() => { dispatch(actions.setCustomPath('')); dispatch(actions.setMode('select')); }}
+        onBack={() => { dispatch(actions.setCustomPath('')); dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); }}
         onSubmit={async (val: string) => {
           const typed = (val.trim() || defaultPath);
           const normalized = ensureMd(typed);
@@ -167,7 +192,8 @@ function AppInner() {
           const abs = path.resolve(result.filePath);
           dispatch(actions.setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' }));
           dispatch(actions.setCustomPath(''));
-          dispatch(actions.setMode('select'));
+          dispatch(actions.setMode('main-menu'));
+          dispatch(actions.setIndex(0));
         }}
       />
     );
