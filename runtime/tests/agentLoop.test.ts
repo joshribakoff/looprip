@@ -100,8 +100,14 @@ describe('parseActionPayload', () => {
     const actions = parseActionPayload(payload, logger);
 
     expect(actions).toHaveLength(2);
-    expect(actions[0].args.path).toBe('a');
-    expect(actions[1].args.path).toBe('b');
+    expect(actions[0].action).toBe('read_file');
+    expect(actions[1].action).toBe('read_file');
+    if (actions[0].action === 'read_file') {
+      expect(actions[0].args.path).toBe('a');
+    }
+    if (actions[1].action === 'read_file') {
+      expect(actions[1].args.path).toBe('b');
+    }
     const warnArgs = byLevel('warn');
     expect(warnArgs).toHaveLength(1);
     expect(String(warnArgs[0][0])).toContain('Truncating to the first two');
@@ -128,6 +134,12 @@ describe('createAgentLoop helpers', () => {
       writeFile: async () => {
         throw new Error('writeFile should not be called');
       },
+      listDirectory: async () => {
+        throw new Error('listDirectory should not be called');
+      },
+      runNpmScript: async () => {
+        throw new Error('runNpmScript should not be called');
+      },
       loadSystemPrompt: async () => 'system',
       callModel: async () => 'never used',
       config: { provider: 'openai', maxIterations: 1, userPrompt: 'prompt' },
@@ -152,6 +164,12 @@ describe('createAgentLoop helpers', () => {
       writeFile: async (path, contents) => {
         writeCalls.push({ path, contents });
         return `/abs/${path}`;
+      },
+      listDirectory: async () => {
+        throw new Error('listDirectory should not be called');
+      },
+      runNpmScript: async () => {
+        throw new Error('runNpmScript should not be called');
       },
       loadSystemPrompt: async () => 'system',
       callModel: async () => 'never used',
@@ -187,6 +205,12 @@ describe('runAgentLoop', () => {
         writeCalls.push({ path, contents });
         return `/abs/${path}`;
       },
+      listDirectory: async () => {
+        throw new Error('listDirectory should not be called');
+      },
+      runNpmScript: async () => {
+        throw new Error('runNpmScript should not be called');
+      },
       loadSystemPrompt: async () => 'System Prompt',
       callModel: async (provider, systemPrompt, history) => {
         callModelCalls.push({
@@ -213,5 +237,83 @@ describe('runAgentLoop', () => {
     expect(writeCalls).toEqual([{ path: 'note.txt', contents: 'updated' }]);
     const logMessages = loggerStub.byLevel('log').map((args) => args.map(String).join(' '));
     expect(logMessages.some((message) => message.includes('Loop finished'))).toBe(true);
+  });
+
+  it('executes list_directory actions and keeps the loop running', async () => {
+    const loop = createAgentLoop({
+      readFile: async () => {
+        throw new Error('readFile should not be called');
+      },
+      writeFile: async () => {
+        throw new Error('writeFile should not be called');
+      },
+      listDirectory: async () => ({
+        resolvedPath: '/workspace',
+        entries: [
+          { path: 'src/', type: 'directory' as const },
+          { path: 'src/index.ts', type: 'file' as const },
+        ],
+        truncated: false,
+        pattern: undefined,
+        recursive: false,
+        limit: 200,
+      }),
+      runNpmScript: async () => {
+        throw new Error('runNpmScript should not be called');
+      },
+      loadSystemPrompt: async () => 'system',
+      callModel: async () => 'never used',
+      config: { provider: 'openai', maxIterations: 1, userPrompt: 'prompt' },
+      logger: console,
+    });
+
+    const action: AgentAction = { action: 'list_directory', args: { path: '.', recursive: false, pattern: undefined, maxResults: 200 } };
+    const result = await loop.executeAction(action);
+
+    expect(result.continueLoop).toBe(true);
+    expect(result.observation).toContain('list_directory succeeded');
+    expect(result.observation).toContain('src/index.ts');
+  });
+
+  it('executes run_npm_script actions and reports output', async () => {
+    const loop = createAgentLoop({
+      readFile: async () => {
+        throw new Error('readFile should not be called');
+      },
+      writeFile: async () => {
+        throw new Error('writeFile should not be called');
+      },
+      listDirectory: async () => {
+        throw new Error('listDirectory should not be called');
+      },
+      runNpmScript: async () => ({
+        script: 'runtime:test',
+        npmScript: 'runtime:test',
+        command: 'npm',
+        args: ['run', 'runtime:test', '--', '--run'],
+        cwd: '/workspace',
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+        stdout: 'ok',
+        stderr: '',
+        stdoutTruncated: false,
+        stdoutOverflow: 0,
+        stderrTruncated: false,
+        stderrOverflow: 0,
+      }),
+      loadSystemPrompt: async () => 'system',
+      callModel: async () => 'never used',
+      config: { provider: 'openai', maxIterations: 1, userPrompt: 'prompt' },
+      logger: console,
+    });
+
+    const action: AgentAction = { action: 'run_npm_script', args: { script: 'runtime:test', flags: { run: true } } };
+    const result = await loop.executeAction(action);
+
+    expect(result.continueLoop).toBe(true);
+    expect(result.observation).toContain('run_npm_script completed');
+    expect(result.observation).toContain('exit_code: 0');
+    expect(result.historyInjection).toBeDefined();
   });
 });

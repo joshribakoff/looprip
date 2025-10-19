@@ -1,23 +1,12 @@
-import { z } from 'zod';
-
-import { readFileAction, readFileArgsSchema } from './actions/readFile.js';
-import { writeFileAction, writeFileArgsSchema } from './actions/writeFile.js';
+import { listDirectoryAction } from './actions/listDirectory.js';
+import { readFileAction } from './actions/readFile.js';
+import { runNpmScriptAction } from './actions/runNpmScript.js';
+import { writeFileAction } from './actions/writeFile.js';
 import { config, type AgentRuntimeConfig } from './config.js';
 import { callModel, type ConversationEntry } from './models/index.js';
 import { loadSystemPrompt } from './utils/systemPrompt.js';
-
-const agentActionSchema = z.discriminatedUnion('action', [
-  z.object({
-    action: z.literal('read_file'),
-    args: readFileArgsSchema,
-  }),
-  z.object({
-    action: z.literal('write_file'),
-    args: writeFileArgsSchema,
-  }),
-]);
-
-export type AgentAction = z.infer<typeof agentActionSchema>;
+import { agentActionSchema, isAgentActionName, type AgentAction } from './actions/agentActionSchema.js';
+export type { AgentAction } from './actions/agentActionSchema.js';
 const READ_FILE_TRUNCATION_LIMIT = 6000;
 
 export type AgentLoopConfig = Pick<AgentRuntimeConfig, 'provider' | 'maxIterations' | 'userPrompt'>;
@@ -31,6 +20,8 @@ export interface AgentLoopLogger {
 export interface AgentLoopDeps {
   readFile: typeof readFileAction;
   writeFile: typeof writeFileAction;
+  listDirectory: typeof listDirectoryAction;
+  runNpmScript: typeof runNpmScriptAction;
   loadSystemPrompt: typeof loadSystemPrompt;
   callModel: typeof callModel;
   config: AgentLoopConfig;
@@ -75,7 +66,7 @@ export function normalizeActionsPayload(payload: unknown): unknown[] {
     }
 
     const entries = Object.entries(record);
-    if (entries.length > 0 && entries.every(([key]) => key === 'read_file' || key === 'write_file')) {
+    if (entries.length > 0 && entries.every(([key]) => isAgentActionName(key))) {
       return entries.map(([action, value]) => {
         const args = value && typeof value === 'object' && 'args' in (value as Record<string, unknown>)
           ? (value as { args: unknown }).args
@@ -96,7 +87,7 @@ export function parseActionPayload(rawResponse: string, logger: AgentLoopLogger 
       logger.warn('[agent] Received more than two actions. Truncating to the first two.');
     }
 
-    return rawActions.slice(0, 2).map((rawAction) => agentActionSchema.parse(rawAction));
+    return rawActions.slice(0, 2).map((rawAction) => agentActionSchema.parse(rawAction) as AgentAction);
   } catch (error) {
     logger.error('[agent] Failed to parse agent response. Raw payload follows:');
     logger.error(rawResponse);
@@ -108,6 +99,8 @@ export function createAgentLoop(deps: AgentLoopDeps) {
   const {
     readFile,
     writeFile,
+    listDirectory,
+    runNpmScript,
     loadSystemPrompt: loadPrompt,
     callModel: callModelFn,
     config: loopConfig,
@@ -115,28 +108,75 @@ export function createAgentLoop(deps: AgentLoopDeps) {
   } = deps;
 
   async function executeAction(action: AgentAction): Promise<{ observation: string; continueLoop: boolean; historyInjection?: string }> {
-    if (action.action === 'read_file') {
-      const { path } = action.args;
-      const { contents, resolvedPath } = await readFile(path);
-      const truncated = contents.length > READ_FILE_TRUNCATION_LIMIT
-        ? `${contents.slice(0, READ_FILE_TRUNCATION_LIMIT)}\n...[truncated ${contents.length - READ_FILE_TRUNCATION_LIMIT} characters]`
-        : contents;
-      const observation = `Observation: read_file succeeded.\npath: ${resolvedPath}\ncontents:\n${truncated}`;
-      return {
-        observation,
-        continueLoop: true,
-        historyInjection: `${observation}\nRespond with the next JSON action.`,
-      };
-    }
+    switch (action.action) {
+      case 'read_file': {
+        const { path } = action.args;
+        const { contents, resolvedPath } = await readFile(path);
+        const truncated = contents.length > READ_FILE_TRUNCATION_LIMIT
+          ? `${contents.slice(0, READ_FILE_TRUNCATION_LIMIT)}\n...[truncated ${contents.length - READ_FILE_TRUNCATION_LIMIT} characters]`
+          : contents;
+        const observation = `Observation: read_file succeeded.\npath: ${resolvedPath}\ncontents:\n${truncated}`;
+        return {
+          observation,
+          continueLoop: true,
+          historyInjection: `${observation}\nRespond with the next JSON action.`,
+        };
+      }
 
-    const { path, contents } = action.args;
-    const resolvedPath = await writeFile(path, contents);
-    const observation = `Observation: write_file succeeded at ${resolvedPath}.`;
-    return {
-      observation,
-      continueLoop: false,
-      historyInjection: undefined,
-    };
+      case 'write_file': {
+        const { path, contents } = action.args;
+        const resolvedPath = await writeFile(path, contents);
+        const observation = `Observation: write_file succeeded at ${resolvedPath}.`;
+        return {
+          observation,
+          continueLoop: false,
+          historyInjection: undefined,
+        };
+      }
+
+      case 'list_directory': {
+        const result = await listDirectory(action.args);
+        const entriesText = result.entries.length > 0
+          ? result.entries.map((entry) => `- [${entry.type}] ${entry.path}`).join('\n')
+          : '- [empty] (no entries matched)';
+        const truncatedNote = result.truncated ? `\n...[truncated to ${result.limit} entries]` : '';
+        const patternLine = `pattern: ${result.pattern ?? '<none>'}`;
+        const observation = `Observation: list_directory succeeded.\npath: ${result.resolvedPath}\n${patternLine}\nrecursive: ${result.recursive}\nentries:\n${entriesText}${truncatedNote}`;
+        return {
+          observation,
+          continueLoop: true,
+          historyInjection: `${observation}\nRespond with the next JSON action.`,
+        };
+      }
+
+      case 'run_npm_script': {
+        const result = await runNpmScript(action.args);
+        const stdoutSuffix = result.stdoutTruncated ? `\n...[truncated ${result.stdoutOverflow} characters]` : '';
+        const stderrSuffix = result.stderrTruncated ? `\n...[truncated ${result.stderrOverflow} characters]` : '';
+        const stdoutBlock = result.stdout ? `${result.stdout}${stdoutSuffix}` : `[no stdout]${stdoutSuffix}`;
+        const stderrBlock = result.stderr ? `${result.stderr}${stderrSuffix}` : `[no stderr]${stderrSuffix}`;
+        const observation = [
+          'Observation: run_npm_script completed.',
+          `script: ${result.script}`,
+          `exit_code: ${result.exitCode ?? 'null'}`,
+          `signal: ${result.signal ?? 'null'}`,
+          `timed_out: ${result.timedOut}`,
+          'stdout:',
+          stdoutBlock,
+          'stderr:',
+          stderrBlock,
+        ].join('\n');
+
+        return {
+          observation,
+          continueLoop: true,
+          historyInjection: `${observation}\nRespond with the next JSON action.`,
+        };
+      }
+
+      default:
+        throw new Error(`Unsupported action: ${(action as { action: string }).action}`);
+    }
   }
 
   async function runAgentLoop(): Promise<void> {
@@ -190,6 +230,8 @@ export function createAgentLoop(deps: AgentLoopDeps) {
 const defaultAgentLoop = createAgentLoop({
   readFile: readFileAction,
   writeFile: writeFileAction,
+  listDirectory: listDirectoryAction,
+  runNpmScript: runNpmScriptAction,
   loadSystemPrompt,
   callModel,
   config,
