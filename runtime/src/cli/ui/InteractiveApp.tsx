@@ -4,8 +4,6 @@ import path from 'path';
 import fs from 'fs/promises';
 import chalk from 'chalk';
 import {PipelineParser} from '../../core/parser.js';
-import {PipelineExecutor} from '../../executors/index.js';
-import {Logger} from '../../utils/logger.js';
 import { createPrompt } from '../createPrompt.js';
 import SelectScreen from './screens/SelectScreen.js';
 import StatusScreen from './screens/StatusScreen.js';
@@ -14,6 +12,7 @@ import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 import { useCreatePromptValidation } from './hooks/useCreatePromptValidation.js';
+import { usePipelineRunner } from './hooks/usePipelineRunner.js';
 
 function detectNeedsPrompt(pipeline: any): boolean {
   const containsPromptVar = (val: any): boolean => {
@@ -42,6 +41,7 @@ export function InteractiveApp() {
   const [message, setMessage] = useState<string>('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [lastResultSuccess, setLastResultSuccess] = useState<boolean | null>(null);
+  const { executePipeline } = usePipelineRunner();
   // Create-prompt validation state moved into hook
   const { defaultPath, createPathInfo } = useCreatePromptValidation({
     cwd,
@@ -101,7 +101,6 @@ export function InteractiveApp() {
       setMode('summary');
       return;
     }
-    const logger = new Logger(false);
     try {
       setStatus('loading');
       setMessage(chalk.gray(`Loading pipeline: ${selectedPath}`));
@@ -117,17 +116,10 @@ export function InteractiveApp() {
         return;
       }
       setMode('running');
-      const executor = new PipelineExecutor(process.env.ANTHROPIC_API_KEY, logger);
-      const context = {
-        workingDirectory: cwd,
-        environment: {},
-        userPrompt: userPrompt || undefined,
-        verbose: false
-      } as const;
-      const result = await executor.execute(pipeline, context);
-      setLastResultSuccess(result.success);
-      setStatus(result.success ? 'success' : 'error');
-      setMessage(result.success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed'));
+      const { success } = await executePipeline(pipeline, { cwd, userPrompt: userPrompt || undefined });
+      setLastResultSuccess(success);
+      setStatus(success ? 'success' : 'error');
+      setMessage(success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed'));
       setMode('summary');
     } catch (err: any) {
       setLastResultSuccess(false);
