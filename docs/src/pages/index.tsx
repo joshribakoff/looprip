@@ -2,7 +2,7 @@ import React from 'react';
 import Layout from '@theme/Layout';
 import Link from '@docusaurus/Link';
 
-export default function Home(): JSX.Element {
+export default function Home() {
   return (
     <Layout title="Agentic Pipelines" description="Safer, more controlled AI automation">
       <main style={{padding: '4rem 1rem'}}>

@@ -43,7 +43,10 @@ const config: Config = {
           sidebarPath: './sidebars.ts',
           routeBasePath: '/docs',
         },
-        blog: false,
+        blog: {
+          showReadingTime: true,
+          routeBasePath: '/blog',
+        },
         theme: {
           customCss: './src/css/custom.css',
         },
@@ -60,11 +63,12 @@ const config: Config = {
     navbar: {
       title: 'Agentic Pipelines',
       logo: {
-        alt: 'Logo',
+        alt: 'LoopRip logo',
         src: 'img/logo.svg',
       },
       items: [
         { to: '/docs/intro', label: 'Docs', position: 'left' },
+        { to: '/blog', label: 'Blog', position: 'left' },
       ],
     },
     footer: {
