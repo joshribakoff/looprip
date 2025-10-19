@@ -11,6 +11,8 @@ import { createPrompt } from '../createPrompt.js';
 import SelectScreen from './screens/SelectScreen.js';
 import StatusScreen from './screens/StatusScreen.js';
 import CustomPathScreen from './screens/CustomPathScreen.js';
+import EnterPromptScreen from './screens/EnterPromptScreen.js';
+import CreatePromptScreen from './screens/CreatePromptScreen.js';
 
 type PipelineChoice = { title: string; value: string };
 
@@ -197,49 +199,30 @@ export function InteractiveApp() {
 
   if (mode === 'create-prompt') {
     const defaultPath = path.join('prompts', 'new-prompt.md');
-    const info = createPathInfo;
-    const invalid = !!info?.exists;
     return (
-      <Box flexDirection="column">
-        {header}
-        <Box marginTop={1}>
-          <Text>New prompt path (edit if desired): </Text>
-          <TextInput
-            value={customPath || defaultPath}
-            onChange={setCustomPath}
-            onSubmit={async (val: string) => {
-              const typed = (val.trim() || defaultPath);
-              const normalized = ensureMd(typed);
-              const absPath = path.resolve(cwd, normalized);
-              const exists = await fs.stat(absPath).then((s) => s.isFile()).catch(() => false);
-              if (exists) {
-                // Block submission when invalid; stay on this screen and let the red hint guide the user
-                return;
-              }
-              const result = await createPrompt({ cwd, input: normalized, openInEditor: true });
-              const rel = path.relative(cwd, result.filePath) || result.filePath;
-              const abs = path.resolve(result.filePath);
-              setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' });
-              // Reset create state and return to main menu
-              setCustomPath('');
-              setCreatePathInfo(null);
-              setMode('select');
-            }}
-          />
-        </Box>
-        {info && (
-          <Box marginTop={1}>
-            <Text color={info.exists ? 'red' : 'green'}>
-              {info.exists ? 'Already exists: ' : 'Will create: '}{info.rel}
-            </Text>
-          </Box>
-        )}
-        <Box marginTop={1}>
-          <Text dimColor>
-            {invalid ? 'Pick a different name. ' : 'Enter: create. '}Tip: Use backspace to change folder/name. Esc: back
-          </Text>
-        </Box>
-      </Box>
+      <CreatePromptScreen
+        header={header}
+        defaultPath={defaultPath}
+        value={customPath}
+        createPathInfo={createPathInfo}
+        onChange={setCustomPath}
+        onSubmit={async (val: string) => {
+          const typed = (val.trim() || defaultPath);
+          const normalized = ensureMd(typed);
+          const absPath = path.resolve(cwd, normalized);
+          const exists = await fs.stat(absPath).then((s) => s.isFile()).catch(() => false);
+          if (exists) {
+            return;
+          }
+          const result = await createPrompt({ cwd, input: normalized, openInEditor: true });
+          const rel = path.relative(cwd, result.filePath) || result.filePath;
+          const abs = path.resolve(result.filePath);
+          setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' });
+          setCustomPath('');
+          setCreatePathInfo(null);
+          setMode('select');
+        }}
+      />
     );
   }
 
@@ -260,20 +243,12 @@ export function InteractiveApp() {
 
   if (mode === 'enter-prompt') {
     return (
-      <Box flexDirection="column">
-        {header}
-        <Box marginTop={1}>
-          <Text>Enter prompt required by this pipeline: </Text>
-          <TextInput
-            value={userPrompt}
-            onChange={setUserPrompt}
-            onSubmit={() => onSubmitPrompt()}
-          />
-        </Box>
-        <Box marginTop={1}>
-          <Text dimColor>Esc: back</Text>
-        </Box>
-      </Box>
+      <EnterPromptScreen
+        header={header}
+        value={userPrompt}
+        onChange={setUserPrompt}
+        onSubmit={() => onSubmitPrompt()}
+      />
     );
   }
 
