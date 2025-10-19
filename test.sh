@@ -44,7 +44,7 @@ echo ""
 echo "✓ Test 5: Testing file tracking..."
 # Test file tracking
 echo "Testing file tracking..."
-p run examples/file-tracking-test/pipeline.yaml > /dev/null 2>&1
+./p run examples/file-tracking-test/pipeline.yaml > /dev/null 2>&1
 rm -f test-file.txt
 echo "  File tracking working"
 echo ""
