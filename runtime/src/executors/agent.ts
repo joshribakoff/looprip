@@ -9,6 +9,7 @@ import { TemplateEngine } from '../core/template.js';
 import { SchemaParser } from '../core/schema.js';
 import { getTools } from '../tools/index.js';
 import { Logger } from '../utils/logger.js';
+import { loadSystemPrompt } from '../utils/systemPrompt.js';
 
 export class AgentExecutor implements NodeExecutor {
   private templateEngine = new TemplateEngine();
@@ -43,8 +44,8 @@ export class AgentExecutor implements NodeExecutor {
       this.logger.agentPrompt(prompt);
       this.logger.agentTools(tools.map((t) => t.name));
 
-      // Build the system prompt
-      const systemPrompt = this.buildSystemPrompt(node, outputSchema);
+      // Load the system prompt from the markdown file
+      const systemPrompt = await loadSystemPrompt();
 
       // Run the agent
       const result = await this.runAgent(prompt, systemPrompt, tools, outputSchema, _context);

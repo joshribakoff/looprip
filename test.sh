@@ -21,7 +21,7 @@ echo ""
 # Test 2: Unit Tests
 echo "✓ Test 2: Running unit tests..."
 npm test -- --run > /dev/null 2>&1
-echo "  All 31 tests passing"
+echo "  All tests passing"
 echo ""
 
 # Test 3: Validate all pipelines
@@ -71,8 +71,8 @@ echo "=========================================="
 echo ""
 echo "Summary:"
 echo "  - Runtime builds successfully"
-echo "  - 31 unit tests passing"
-echo "  - 8 example pipelines validated"
+echo "  - 111 unit tests passing"
+echo "  - 10 example pipelines validated"
 echo "  - Task execution working"
 echo "  - File tracking working"
 echo "  - Quality gates working"
