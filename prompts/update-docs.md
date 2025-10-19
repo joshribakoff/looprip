@@ -2,6 +2,7 @@
 status: draft
 ---
 
+Update the docs/ folder with new content, heres a draft, but I want you to rewrite this:
 
 The documentation currently focuses on how this system avoids the downsides of traditional AI workflows — like runaway loops, lack of transparency, or excessive token costs.
 
