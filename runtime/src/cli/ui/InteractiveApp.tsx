@@ -9,6 +9,7 @@ import {PipelineExecutor} from '../../executors/index.js';
 import {Logger} from '../../utils/logger.js';
 import { createPrompt } from '../createPrompt.js';
 import SelectScreen from './screens/SelectScreen.js';
+import StatusScreen from './screens/StatusScreen.js';
 
 type PipelineChoice = { title: string; value: string };
 
@@ -285,20 +286,13 @@ export function InteractiveApp() {
 
   if (mode === 'running' || mode === 'summary') {
     return (
-      <Box flexDirection="column">
-        {header}
-        <Box marginTop={1}>
-          <Text>{status === 'loading' ? 'Running…' : ''}</Text>
-        </Box>
-        <Box marginTop={1}>
-          <Text>{message}</Text>
-        </Box>
-        {mode === 'summary' && (
-          <Box marginTop={1}>
-            <Text dimColor>{lastResultSuccess === true || lastResultSuccess === false ? 'Enter: back • q: quit' : 'q: quit'}</Text>
-          </Box>
-        )}
-      </Box>
+      <StatusScreen
+        header={header}
+        mode={mode}
+        status={status}
+        message={message}
+        lastResultSuccess={lastResultSuccess}
+      />
     );
   }
 
