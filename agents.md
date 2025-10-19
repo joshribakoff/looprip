@@ -100,6 +100,41 @@ When extending executors:
 - Keep imports relative within the `runtime/` package.
 - UI uses React 19 + Ink 6; write `.tsx` for components.
 
+### State management patterns (Redux-style)
+
+We use a Redux-like pattern with React Context + useReducer for UI state. Follow these critical principles:
+
+**✅ DO: Dispatch semantic actions that represent events**
+- Actions should describe **what happened**, not **how to update state**
+- Good: `PIPELINE_COMPLETED`, `USER_NAVIGATED_TO_MAIN_MENU`, `PROMPT_CREATED`
+- Bad: `SET_MODE`, `SET_STATUS`, `SET_MESSAGE`
+
+**❌ DON'T: Dispatch multiple actions in a row**
+- This is a code smell indicating you're thinking imperatively about state
+- If you need to dispatch multiple actions, create a single semantic action instead
+- Bad example:
+  ```typescript
+  dispatch(actions.setMode('summary'));
+  dispatch(actions.setStatus('error'));
+  dispatch(actions.setMessage('Failed'));
+  dispatch(actions.setLastResult(false));
+  ```
+- Good example:
+  ```typescript
+  dispatch(actions.pipelineFailed('Failed'));
+  ```
+
+**✅ DO: Keep components self-contained**
+- Components should use `useUiDispatch()` and `useUiState()` directly
+- Avoid prop drilling callbacks with dispatch logic
+- Bad: Parent passes `onChange={() => dispatch(actions.setCustomPath(v))}`
+- Good: Child component handles its own state interactions
+
+**✅ DO: Frame actions declaratively**
+- Think about user intentions and system events, not state mutations
+- Examples: "user clicked run", "pipeline completed", "validation failed", "user navigated back"
+- The reducer decides how these events affect state
+
 ## Quick tasks for co-pilots
 
 - Add a new screen: clone `SelectScreen.tsx` style and adapt props.

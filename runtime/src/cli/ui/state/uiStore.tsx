@@ -21,15 +21,31 @@ export type UIState = {
 };
 
 export type UIAction =
-  | { type: 'SET_MODE'; mode: Mode }
-  | { type: 'SET_INDEX'; index: number }
-  | { type: 'SET_CUSTOM_PATH'; value: string }
-  | { type: 'SET_USER_PROMPT'; value: string }
-  | { type: 'SET_MESSAGE'; value: string }
-  | { type: 'SET_STATUS'; value: UIStatus }
-  | { type: 'SET_LAST_RESULT'; value: boolean | null }
-  | { type: 'SET_NOTICE'; value: Notice }
-  | { type: 'SET_SCROLL_OFFSET'; value: number };
+  // Navigation events
+  | { type: 'NAVIGATE_UP' }
+  | { type: 'NAVIGATE_DOWN'; maxIndex: number }
+  | { type: 'NAVIGATE_TO_MAIN_MENU' }
+  | { type: 'NAVIGATE_TO_SELECT_PIPELINE' }
+  | { type: 'NAVIGATE_TO_CREATE_PROMPT' }
+  | { type: 'NAVIGATE_TO_CUSTOM_PATH' }
+  | { type: 'NAVIGATE_TO_ENTER_PROMPT'; pipelinePath: string }
+  | { type: 'RETURN_FROM_SCREEN' }
+  // Input events
+  | { type: 'INPUT_CHANGED'; field: 'customPath' | 'userPrompt'; value: string }
+  | { type: 'SCROLL_UP' }
+  | { type: 'SCROLL_DOWN' }
+  // Pipeline lifecycle events
+  | { type: 'PIPELINE_LOADING_STARTED'; path: string }
+  | { type: 'PIPELINE_EXECUTION_STARTED' }
+  | { type: 'PIPELINE_COMPLETED'; success: boolean; message: string }
+  | { type: 'PIPELINE_FAILED'; error: string }
+  | { type: 'PIPELINE_NOT_FOUND'; path: string }
+  // Prompt events
+  | { type: 'PROMPT_CREATED'; filePath: string; relativePath: string }
+  | { type: 'PROMPT_SUBMITTED' }
+  // System events
+  | { type: 'CHOICES_CHANGED'; newLength: number }
+  | { type: 'NOTICE_DISMISSED' };
 
 export function createInitialState(params: { cwd: string }): UIState {
   return {
@@ -48,24 +64,56 @@ export function createInitialState(params: { cwd: string }): UIState {
 
 function reducer(state: UIState, action: UIAction): UIState {
   switch (action.type) {
-    case 'SET_MODE':
-      return { ...state, mode: action.mode };
-    case 'SET_INDEX':
-      return { ...state, index: action.index };
-    case 'SET_CUSTOM_PATH':
-      return { ...state, customPath: action.value };
-    case 'SET_USER_PROMPT':
-      return { ...state, userPrompt: action.value };
-    case 'SET_MESSAGE':
-      return { ...state, message: action.value };
-    case 'SET_STATUS':
-      return { ...state, status: action.value };
-    case 'SET_LAST_RESULT':
-      return { ...state, lastResultSuccess: action.value };
-    case 'SET_NOTICE':
-      return { ...state, notice: action.value };
-    case 'SET_SCROLL_OFFSET':
-      return { ...state, scrollOffset: action.value };
+    // Navigation
+    case 'NAVIGATE_UP':
+      return { ...state, index: state.index > 0 ? state.index - 1 : state.index };
+    case 'NAVIGATE_DOWN':
+      return { ...state, index: state.index < action.maxIndex ? state.index + 1 : 0 };
+    case 'NAVIGATE_TO_MAIN_MENU':
+      return { ...state, mode: 'main-menu', index: 0, notice: null, customPath: '', userPrompt: '' };
+    case 'NAVIGATE_TO_SELECT_PIPELINE':
+      return { ...state, mode: 'select', index: 0, notice: null };
+    case 'NAVIGATE_TO_CREATE_PROMPT':
+      return { ...state, mode: 'create-prompt', customPath: '' };
+    case 'NAVIGATE_TO_CUSTOM_PATH':
+      return { ...state, mode: 'custom-path', customPath: '' };
+    case 'NAVIGATE_TO_ENTER_PROMPT':
+      return { ...state, mode: 'enter-prompt', message: action.pipelinePath, status: 'idle' };
+    case 'RETURN_FROM_SCREEN':
+      return { ...state, mode: 'select', customPath: '', userPrompt: '' };
+    
+    // Input
+    case 'INPUT_CHANGED':
+      return { ...state, [action.field]: action.value };
+    case 'SCROLL_UP':
+      return { ...state, scrollOffset: Math.max(0, state.scrollOffset - 1) };
+    case 'SCROLL_DOWN':
+      return { ...state, scrollOffset: state.scrollOffset + 1 };
+    
+    // Pipeline lifecycle
+    case 'PIPELINE_LOADING_STARTED':
+      return { ...state, mode: 'running', status: 'loading', message: `Loading pipeline: ${action.path}` };
+    case 'PIPELINE_EXECUTION_STARTED':
+      return { ...state, mode: 'running', status: 'loading' };
+    case 'PIPELINE_COMPLETED':
+      return { ...state, mode: 'summary', status: action.success ? 'success' : 'error', message: action.message, lastResultSuccess: action.success, scrollOffset: 0 };
+    case 'PIPELINE_FAILED':
+      return { ...state, mode: 'summary', status: 'error', message: action.error, lastResultSuccess: false };
+    case 'PIPELINE_NOT_FOUND':
+      return { ...state, mode: 'summary', status: 'error', message: `Pipeline not found: ${action.path}`, lastResultSuccess: false };
+    
+    // Prompts
+    case 'PROMPT_CREATED':
+      return { ...state, mode: 'main-menu', index: 0, customPath: '', notice: { text: `Prompt created: ${action.relativePath} (also at ${action.filePath})`, color: 'green' } };
+    case 'PROMPT_SUBMITTED':
+      return { ...state, userPrompt: '' };
+    
+    // System
+    case 'CHOICES_CHANGED':
+      return { ...state, index: Math.min(state.index, Math.max(0, action.newLength - 1)) };
+    case 'NOTICE_DISMISSED':
+      return { ...state, notice: null };
+    
     default:
       return state;
   }
@@ -95,15 +143,35 @@ export function useUiDispatch() {
   return ctx;
 }
 
-// Convenience setters
+// Semantic action creators
 export const actions = {
-  setMode: (mode: Mode): UIAction => ({ type: 'SET_MODE', mode }),
-  setIndex: (index: number): UIAction => ({ type: 'SET_INDEX', index }),
-  setCustomPath: (value: string): UIAction => ({ type: 'SET_CUSTOM_PATH', value }),
-  setUserPrompt: (value: string): UIAction => ({ type: 'SET_USER_PROMPT', value }),
-  setMessage: (value: string): UIAction => ({ type: 'SET_MESSAGE', value }),
-  setStatus: (value: UIStatus): UIAction => ({ type: 'SET_STATUS', value }),
-  setLastResult: (value: boolean | null): UIAction => ({ type: 'SET_LAST_RESULT', value }),
-  setNotice: (value: Notice): UIAction => ({ type: 'SET_NOTICE', value }),
-  setScrollOffset: (value: number): UIAction => ({ type: 'SET_SCROLL_OFFSET', value }),
+  // Navigation
+  navigateUp: (): UIAction => ({ type: 'NAVIGATE_UP' }),
+  navigateDown: (maxIndex: number): UIAction => ({ type: 'NAVIGATE_DOWN', maxIndex }),
+  navigateToMainMenu: (): UIAction => ({ type: 'NAVIGATE_TO_MAIN_MENU' }),
+  navigateToSelectPipeline: (): UIAction => ({ type: 'NAVIGATE_TO_SELECT_PIPELINE' }),
+  navigateToCreatePrompt: (): UIAction => ({ type: 'NAVIGATE_TO_CREATE_PROMPT' }),
+  navigateToCustomPath: (): UIAction => ({ type: 'NAVIGATE_TO_CUSTOM_PATH' }),
+  navigateToEnterPrompt: (pipelinePath: string): UIAction => ({ type: 'NAVIGATE_TO_ENTER_PROMPT', pipelinePath }),
+  returnFromScreen: (): UIAction => ({ type: 'RETURN_FROM_SCREEN' }),
+  
+  // Input
+  inputChanged: (field: 'customPath' | 'userPrompt', value: string): UIAction => ({ type: 'INPUT_CHANGED', field, value }),
+  scrollUp: (): UIAction => ({ type: 'SCROLL_UP' }),
+  scrollDown: (): UIAction => ({ type: 'SCROLL_DOWN' }),
+  
+  // Pipeline lifecycle
+  pipelineLoadingStarted: (path: string): UIAction => ({ type: 'PIPELINE_LOADING_STARTED', path }),
+  pipelineExecutionStarted: (): UIAction => ({ type: 'PIPELINE_EXECUTION_STARTED' }),
+  pipelineCompleted: (success: boolean, message: string): UIAction => ({ type: 'PIPELINE_COMPLETED', success, message }),
+  pipelineFailed: (error: string): UIAction => ({ type: 'PIPELINE_FAILED', error }),
+  pipelineNotFound: (path: string): UIAction => ({ type: 'PIPELINE_NOT_FOUND', path }),
+  
+  // Prompts
+  promptCreated: (filePath: string, relativePath: string): UIAction => ({ type: 'PROMPT_CREATED', filePath, relativePath }),
+  promptSubmitted: (): UIAction => ({ type: 'PROMPT_SUBMITTED' }),
+  
+  // System
+  choicesChanged: (newLength: number): UIAction => ({ type: 'CHOICES_CHANGED', newLength }),
+  noticeDismissed: (): UIAction => ({ type: 'NOTICE_DISMISSED' }),
 };

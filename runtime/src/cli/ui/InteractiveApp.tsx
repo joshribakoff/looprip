@@ -2,9 +2,7 @@ import React, {useEffect} from 'react';
 import {Box, Text, useInput, useApp, Spacer} from 'ink';
 import path from 'path';
 import fs from 'fs/promises';
-import chalk from 'chalk';
 import {PipelineParser} from '../../core/parser.js';
-import { createPrompt } from '../createPrompt.js';
 import MainMenuScreen, { MAIN_MENU_CHOICES } from './screens/MainMenuScreen.js';
 import SelectScreen from './screens/SelectScreen.js';
 import StatusScreen from './screens/StatusScreen.js';
@@ -12,7 +10,6 @@ import CustomPathScreen from './screens/CustomPathScreen.js';
 import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
-import { useCreatePromptValidation } from './hooks/useCreatePromptValidation.js';
 import { usePipelineRunner } from './hooks/usePipelineRunner.js';
 import { UIProvider, useUiDispatch, useUiState, actions } from './state/uiStore.js';
 import { LoggerProvider, useInkLogger } from './logger/InkLogger.js';
@@ -32,34 +29,18 @@ function detectNeedsPrompt(pipeline: any): boolean {
 function AppInner() {
   const {exit} = useApp();
   const cwd = process.cwd();
-  // Helper for .md normalization (mirrors CLI behavior)
-  function ensureMd(fp: string) {
-    return fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`;
-  }
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset } = useUiState();
   const dispatch = useUiDispatch();
   const { logger } = useInkLogger();
   const { executePipeline } = usePipelineRunner(logger);
-  // Create-prompt validation state moved into hook
-  const { defaultPath, createPathInfo } = useCreatePromptValidation({
-    cwd,
-    mode,
-    inputValue: customPath,
-    ensureMd,
-  });
   // Toast/notice shown when returning to the main menu
   const { notice } = useUiState();
 
   // Keep index in range when choices change
   useEffect(() => {
-    if (index >= choices.length) {
-      dispatch(actions.setIndex(Math.max(0, choices.length - 1)));
-    }
-  }, [choices, index, dispatch]);
-
-
-  // (validation effect now handled by useCreatePromptValidation)
+    dispatch(actions.choicesChanged(choices.length));
+  }, [choices.length, dispatch]);
 
   const handleMainMenuSelect = () => {
     const choice = MAIN_MENU_CHOICES[index];
@@ -67,38 +48,36 @@ function AppInner() {
     if (choice.value === 'quit') {
       exit();
     } else if (choice.value === 'run-pipeline') {
-      dispatch(actions.setMode('select'));
-      dispatch(actions.setIndex(0));
+      dispatch(actions.navigateToSelectPipeline());
     } else if (choice.value === 'create-prompt') {
-      dispatch(actions.setMode('create-prompt'));
+      dispatch(actions.navigateToCreatePrompt());
     }
   };
 
   useInput((input: string, key: any) => {
     if (mode === 'main-menu') {
-      if (key.upArrow) dispatch(actions.setIndex(index > 0 ? index - 1 : MAIN_MENU_CHOICES.length - 1));
-      else if (key.downArrow) dispatch(actions.setIndex((index + 1) % MAIN_MENU_CHOICES.length));
+      if (key.upArrow) dispatch(actions.navigateUp());
+      else if (key.downArrow) dispatch(actions.navigateDown(MAIN_MENU_CHOICES.length - 1));
       else if (key.return) handleMainMenuSelect();
       else if (input === 'q' || key.escape) exit();
     } else if (mode === 'select') {
-      if (key.upArrow) dispatch(actions.setIndex(index > 0 ? index - 1 : choices.length - 1));
-      else if (key.downArrow) dispatch(actions.setIndex((index + 1) % Math.max(choices.length || 1, 1)));
+      if (key.upArrow) dispatch(actions.navigateUp());
+      else if (key.downArrow) dispatch(actions.navigateDown(choices.length - 1));
       else if (key.return) handleSelect();
       else if (input === 'r') void refreshChoices();
-      else if (input === 'q' || key.escape) { dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); }
+      else if (input === 'q' || key.escape) dispatch(actions.navigateToMainMenu());
     } else if (mode === 'custom-path') {
-      if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setCustomPath('')); }
+      if (key.escape) dispatch(actions.returnFromScreen());
     } else if (mode === 'enter-prompt') {
-      if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setUserPrompt('')); }
+      if (key.escape) dispatch(actions.returnFromScreen());
     } else if (mode === 'running') {
-      // Allow scrolling output while pipeline is running
-      if (key.upArrow) dispatch(actions.setScrollOffset(Math.max(0, scrollOffset - 1)));
-      else if (key.downArrow) dispatch(actions.setScrollOffset(scrollOffset + 1));
+      if (key.upArrow) dispatch(actions.scrollUp());
+      else if (key.downArrow) dispatch(actions.scrollDown());
     } else if (mode === 'summary') {
-      if (key.upArrow) dispatch(actions.setScrollOffset(Math.max(0, scrollOffset - 1)));
-      else if (key.downArrow) dispatch(actions.setScrollOffset(scrollOffset + 1));
+      if (key.upArrow) dispatch(actions.scrollUp());
+      else if (key.downArrow) dispatch(actions.scrollDown());
       else if (input === 'q' || key.escape) exit();
-      else if (key.return) { dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); dispatch(actions.setLastResult(null)); dispatch(actions.setMessage('')); dispatch(actions.setScrollOffset(0)); }
+      else if (key.return) dispatch(actions.navigateToMainMenu());
     }
   });
 
@@ -106,11 +85,11 @@ function AppInner() {
     const choice = choices[index];
     if (!choice) return;
     if (choice.value === '__custom__') {
-      dispatch(actions.setMode('custom-path'));
+      dispatch(actions.navigateToCustomPath());
       return;
     }
     if (choice.value === '__create_prompt__') {
-      dispatch(actions.setMode('create-prompt'));
+      dispatch(actions.navigateToCreatePrompt());
       return;
     }
     await runPipeline(choice.value);
@@ -119,37 +98,23 @@ function AppInner() {
   const runPipeline = async (selectedPath: string) => {
     const exists = await fs.stat(selectedPath).then((s) => s.isFile()).catch(() => false);
     if (!exists) {
-      dispatch(actions.setStatus('error'));
-      dispatch(actions.setMessage(chalk.red(`Pipeline not found: ${selectedPath}`)));
-      dispatch(actions.setMode('summary'));
+      dispatch(actions.pipelineNotFound(selectedPath));
       return;
     }
     try {
-      dispatch(actions.setStatus('loading'));
-      dispatch(actions.setMessage(chalk.gray(`Loading pipeline: ${selectedPath}`)));
+      dispatch(actions.pipelineLoadingStarted(selectedPath));
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(selectedPath);
       const needsPrompt = detectNeedsPrompt(pipeline);
       if (needsPrompt && !userPrompt) {
-        // Switch to prompt input first
-        dispatch(actions.setMode('enter-prompt'));
-        // Stash selected path in message to re-use
-        dispatch(actions.setMessage(selectedPath));
-        dispatch(actions.setStatus('idle'));
+        dispatch(actions.navigateToEnterPrompt(selectedPath));
         return;
       }
-      dispatch(actions.setMode('running'));
+      dispatch(actions.pipelineExecutionStarted());
       const { success } = await executePipeline(pipeline, { cwd, userPrompt: userPrompt || undefined });
-      dispatch(actions.setLastResult(success));
-      dispatch(actions.setStatus(success ? 'success' : 'error'));
-      dispatch(actions.setMessage(success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed')));
-      dispatch(actions.setScrollOffset(0)); // Reset scroll on completion
-      dispatch(actions.setMode('summary'));
+      dispatch(actions.pipelineCompleted(success, success ? '✔ Pipeline completed' : '✖ Pipeline failed'));
     } catch (err: any) {
-      dispatch(actions.setLastResult(false));
-      dispatch(actions.setStatus('error'));
-      dispatch(actions.setMessage(chalk.red(err?.message || String(err))));
-      dispatch(actions.setMode('summary'));
+      dispatch(actions.pipelineFailed(err?.message || String(err)));
     }
   };
 
@@ -159,7 +124,7 @@ function AppInner() {
     if (pathToRun) {
       await runPipeline(pathToRun);
     } else {
-      dispatch(actions.setMode('select'));
+      dispatch(actions.returnFromScreen());
     }
   };
 
@@ -178,32 +143,7 @@ function AppInner() {
   }
 
   if (mode === 'create-prompt') {
-    return (
-      <CreatePromptScreen
-        header={header}
-        defaultPath={defaultPath}
-        value={customPath}
-        createPathInfo={createPathInfo}
-        onChange={(v: string) => dispatch(actions.setCustomPath(v))}
-        onBack={() => { dispatch(actions.setCustomPath('')); dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); }}
-        onSubmit={async (val: string) => {
-          const typed = (val.trim() || defaultPath);
-          const normalized = ensureMd(typed);
-          const absPath = path.resolve(cwd, normalized);
-          const exists = await fs.stat(absPath).then((s) => s.isFile()).catch(() => false);
-          if (exists) {
-            return;
-          }
-          const result = await createPrompt({ cwd, input: normalized, openInEditor: true });
-          const rel = path.relative(cwd, result.filePath) || result.filePath;
-          const abs = path.resolve(result.filePath);
-          dispatch(actions.setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' }));
-          dispatch(actions.setCustomPath(''));
-          dispatch(actions.setMode('main-menu'));
-          dispatch(actions.setIndex(0));
-        }}
-      />
-    );
+    return <CreatePromptScreen header={header} />;
   }
 
   if (mode === 'custom-path') {
@@ -211,11 +151,10 @@ function AppInner() {
       <CustomPathScreen
         header={header}
         value={customPath}
-        onChange={(v: string) => dispatch(actions.setCustomPath(v))}
-        onBack={() => { dispatch(actions.setMode('select')); dispatch(actions.setCustomPath('')); }}
+        onChange={(v: string) => dispatch(actions.inputChanged('customPath', v))}
+        onBack={() => dispatch(actions.returnFromScreen())}
         onSubmit={(val: string) => {
           const abs = path.resolve(cwd, val.trim());
-          dispatch(actions.setCustomPath(''));
           void runPipeline(abs);
         }}
       />
@@ -227,8 +166,8 @@ function AppInner() {
       <EnterPromptScreen
         header={header}
         value={userPrompt}
-        onChange={(v: string) => dispatch(actions.setUserPrompt(v))}
-        onBack={() => { dispatch(actions.setMode('select')); dispatch(actions.setUserPrompt('')); }}
+        onChange={(v: string) => dispatch(actions.inputChanged('userPrompt', v))}
+        onBack={() => dispatch(actions.returnFromScreen())}
         onSubmit={() => onSubmitPrompt()}
       />
     );
