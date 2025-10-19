@@ -13,6 +13,7 @@ import CustomPathScreen from './screens/CustomPathScreen.js';
 import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
+import { useCreatePromptValidation } from './hooks/useCreatePromptValidation.js';
 
 function detectNeedsPrompt(pipeline: any): boolean {
   const containsPromptVar = (val: any): boolean => {
@@ -29,6 +30,10 @@ type Mode = 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 
 export function InteractiveApp() {
   const {exit} = useApp();
   const cwd = process.cwd();
+  // Helper for .md normalization (mirrors CLI behavior)
+  function ensureMd(fp: string) {
+    return fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`;
+  }
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const [index, setIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('select');
@@ -37,8 +42,13 @@ export function InteractiveApp() {
   const [message, setMessage] = useState<string>('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [lastResultSuccess, setLastResultSuccess] = useState<boolean | null>(null);
-  // Create-prompt validation state
-  const [createPathInfo, setCreatePathInfo] = useState<{ rel: string; abs: string; exists: boolean } | null>(null);
+  // Create-prompt validation state moved into hook
+  const { defaultPath, createPathInfo } = useCreatePromptValidation({
+    cwd,
+    mode,
+    inputValue: customPath,
+    ensureMd,
+  });
   // Toast/notice shown when returning to the main menu
   const [notice, setNotice] = useState<{ text: string; color?: 'green' | 'red' | 'yellow' } | null>(null);
 
@@ -49,24 +59,8 @@ export function InteractiveApp() {
     }
   }, [choices, index]);
 
-  // Helper for .md normalization (mirrors CLI behavior)
-  const ensureMd = (fp: string) => (fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`);
 
-  // Live-validate the target prompt path when in create-prompt mode
-  useEffect(() => {
-    if (mode !== 'create-prompt') return;
-    let cancelled = false;
-    const defaultPath = path.join('prompts', 'new-prompt.md');
-    const typed = (customPath && customPath.trim()) || defaultPath;
-    const normalized = ensureMd(typed);
-    const abs = path.resolve(cwd, normalized);
-    const rel = path.relative(cwd, abs) || abs;
-    (async () => {
-      const exists = await fs.stat(abs).then((s) => s.isFile()).catch(() => false);
-      if (!cancelled) setCreatePathInfo({ rel, abs, exists });
-    })();
-    return () => { cancelled = true; };
-  }, [mode, customPath]);
+  // (validation effect now handled by useCreatePromptValidation)
 
   useInput((input: string, key: any) => {
     if (mode === 'select') {
@@ -162,7 +156,6 @@ export function InteractiveApp() {
   );
 
   if (mode === 'create-prompt') {
-    const defaultPath = path.join('prompts', 'new-prompt.md');
     return (
       <CreatePromptScreen
         header={header}
@@ -183,7 +176,6 @@ export function InteractiveApp() {
           const abs = path.resolve(result.filePath);
           setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' });
           setCustomPath('');
-          setCreatePathInfo(null);
           setMode('select');
         }}
       />
