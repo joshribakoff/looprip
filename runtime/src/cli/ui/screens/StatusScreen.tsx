@@ -1,6 +1,6 @@
 import React from 'react';
 import {Box, Text} from 'ink';
-import { LogView } from '../logger/InkLogger.js';
+import { ScrollableLogView } from '../components/ScrollableLogView.js';
 
 type Props = {
   header: React.ReactNode;
@@ -8,9 +8,10 @@ type Props = {
   status: 'idle' | 'loading' | 'success' | 'error';
   message: string;
   lastResultSuccess: boolean | null;
+  scrollOffset: number;
 };
 
-export function StatusScreen({ header, mode, status, message, lastResultSuccess }: Props) {
+export function StatusScreen({ header, mode, status, message, lastResultSuccess, scrollOffset }: Props) {
   return (
     <Box flexDirection="column">
       {header}
@@ -20,7 +21,7 @@ export function StatusScreen({ header, mode, status, message, lastResultSuccess 
       <Box marginTop={1}>
         <Text>{message}</Text>
       </Box>
-      <LogView />
+      <ScrollableLogView scrollOffset={scrollOffset} windowHeight={15} />
       {mode === 'summary' && (
         <Box marginTop={1}>
           <Text dimColor>{lastResultSuccess === true || lastResultSuccess === false ? 'Enter: back • q: quit' : 'q: quit'}</Text>

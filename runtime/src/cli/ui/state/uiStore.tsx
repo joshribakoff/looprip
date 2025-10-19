@@ -17,6 +17,7 @@ export type UIState = {
   status: UIStatus;
   lastResultSuccess: boolean | null;
   notice: Notice;
+  scrollOffset: number;
 };
 
 export type UIAction =
@@ -27,7 +28,8 @@ export type UIAction =
   | { type: 'SET_MESSAGE'; value: string }
   | { type: 'SET_STATUS'; value: UIStatus }
   | { type: 'SET_LAST_RESULT'; value: boolean | null }
-  | { type: 'SET_NOTICE'; value: Notice };
+  | { type: 'SET_NOTICE'; value: Notice }
+  | { type: 'SET_SCROLL_OFFSET'; value: number };
 
 export function createInitialState(params: { cwd: string }): UIState {
   return {
@@ -40,6 +42,7 @@ export function createInitialState(params: { cwd: string }): UIState {
     status: 'idle',
     lastResultSuccess: null,
     notice: null,
+    scrollOffset: 0,
   };
 }
 
@@ -61,6 +64,8 @@ function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, lastResultSuccess: action.value };
     case 'SET_NOTICE':
       return { ...state, notice: action.value };
+    case 'SET_SCROLL_OFFSET':
+      return { ...state, scrollOffset: action.value };
     default:
       return state;
   }
@@ -100,4 +105,5 @@ export const actions = {
   setStatus: (value: UIStatus): UIAction => ({ type: 'SET_STATUS', value }),
   setLastResult: (value: boolean | null): UIAction => ({ type: 'SET_LAST_RESULT', value }),
   setNotice: (value: Notice): UIAction => ({ type: 'SET_NOTICE', value }),
+  setScrollOffset: (value: number): UIAction => ({ type: 'SET_SCROLL_OFFSET', value }),
 };

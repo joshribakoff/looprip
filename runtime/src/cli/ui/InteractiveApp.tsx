@@ -37,7 +37,7 @@ function AppInner() {
     return fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`;
   }
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
-  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess } = useUiState();
+  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset } = useUiState();
   const dispatch = useUiDispatch();
   const { logger } = useInkLogger();
   const { executePipeline } = usePipelineRunner(logger);
@@ -90,9 +90,15 @@ function AppInner() {
       if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setCustomPath('')); }
     } else if (mode === 'enter-prompt') {
       if (key.escape) { dispatch(actions.setMode('select')); dispatch(actions.setUserPrompt('')); }
+    } else if (mode === 'running') {
+      // Allow scrolling output while pipeline is running
+      if (key.upArrow) dispatch(actions.setScrollOffset(Math.max(0, scrollOffset - 1)));
+      else if (key.downArrow) dispatch(actions.setScrollOffset(scrollOffset + 1));
     } else if (mode === 'summary') {
-      if (input === 'q' || key.escape) exit();
-      if (key.return) { dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); dispatch(actions.setLastResult(null)); dispatch(actions.setMessage('')); }
+      if (key.upArrow) dispatch(actions.setScrollOffset(Math.max(0, scrollOffset - 1)));
+      else if (key.downArrow) dispatch(actions.setScrollOffset(scrollOffset + 1));
+      else if (input === 'q' || key.escape) exit();
+      else if (key.return) { dispatch(actions.setMode('main-menu')); dispatch(actions.setIndex(0)); dispatch(actions.setLastResult(null)); dispatch(actions.setMessage('')); dispatch(actions.setScrollOffset(0)); }
     }
   });
 
@@ -137,6 +143,7 @@ function AppInner() {
       dispatch(actions.setLastResult(success));
       dispatch(actions.setStatus(success ? 'success' : 'error'));
       dispatch(actions.setMessage(success ? chalk.green('✔ Pipeline completed') : chalk.red('✖ Pipeline failed')));
+      dispatch(actions.setScrollOffset(0)); // Reset scroll on completion
       dispatch(actions.setMode('summary'));
     } catch (err: any) {
       dispatch(actions.setLastResult(false));
@@ -235,6 +242,7 @@ function AppInner() {
         status={status}
         message={message}
         lastResultSuccess={lastResultSuccess}
+        scrollOffset={scrollOffset}
       />
     );
   }
