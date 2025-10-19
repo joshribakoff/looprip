@@ -58,6 +58,12 @@
 			"type": "shell",
 			"command": "npm run -w runtime build",
 			"group": "build"
+		},
+		{
+			"label": "Build runtime TypeScript",
+			"type": "shell",
+			"command": "npm run -w runtime build",
+			"group": "build"
 		}
 	]
 }

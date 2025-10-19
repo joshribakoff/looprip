@@ -61,6 +61,8 @@ export function InteractiveApp() {
   const [lastResultSuccess, setLastResultSuccess] = useState<boolean | null>(null);
   // Create-prompt validation state
   const [createPathInfo, setCreatePathInfo] = useState<{ rel: string; abs: string; exists: boolean } | null>(null);
+  // Toast/notice shown when returning to the main menu
+  const [notice, setNotice] = useState<{ text: string; color?: 'green' | 'red' | 'yellow' } | null>(null);
 
   // Load choices on mount, and refresh on "r"
   const refreshChoices = async () => {
@@ -208,17 +210,17 @@ export function InteractiveApp() {
               const absPath = path.resolve(cwd, normalized);
               const exists = await fs.stat(absPath).then((s) => s.isFile()).catch(() => false);
               if (exists) {
-                // Do not proceed when file exists
-                setStatus('error');
-                setMessage(chalk.red(`File already exists: ${path.relative(cwd, absPath) || absPath}`));
-                setMode('summary');
+                // Block submission when invalid; stay on this screen and let the red hint guide the user
                 return;
               }
               const result = await createPrompt({ cwd, input: normalized, openInEditor: true });
               const rel = path.relative(cwd, result.filePath) || result.filePath;
               const abs = path.resolve(result.filePath);
-              setMessage(chalk.green(`Prompt created: ${rel}\n${abs}`));
-              setMode('summary');
+              setNotice({ text: `Prompt created: ${rel} (also at ${abs})`, color: 'green' });
+              // Reset create state and return to main menu
+              setCustomPath('');
+              setCreatePathInfo(null);
+              setMode('select');
             }}
           />
         </Box>
@@ -303,6 +305,11 @@ export function InteractiveApp() {
   return (
     <Box flexDirection="column">
       {header}
+      {notice && (
+        <Box marginTop={1}>
+          <Text color={notice.color}>{notice.text}</Text>
+        </Box>
+      )}
       <Box marginTop={1} flexDirection="column">
         {choices.length === 0 ? (
           <Text dimColor>No pipeline files found. Press "r" to refresh or use custom path.</Text>
