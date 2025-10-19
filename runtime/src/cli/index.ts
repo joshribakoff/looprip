@@ -8,6 +8,7 @@ import { Command } from 'commander';
 import { resolve } from 'path';
 import { PipelineParser } from '../core/parser.js';
 import { PipelineExecutor } from '../executors/index.js';
+import { Logger } from '../utils/logger.js';
 import chalk from 'chalk';
 
 const program = new Command();
@@ -26,28 +27,30 @@ program
   .option('--dry-run', 'Validate pipeline without executing', false)
   .option('--api-key <key>', 'Anthropic API key (or set ANTHROPIC_API_KEY env var)')
   .action(async (pipelinePath: string, options: any) => {
+    const logger = new Logger(options.verbose);
+    
     try {
       const absolutePath = resolve(process.cwd(), pipelinePath);
       
-      console.log(chalk.blue(`Loading pipeline: ${absolutePath}`));
+      logger.loading(`Loading pipeline: ${absolutePath}`);
       
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(absolutePath);
       
-      console.log(chalk.green('✓ Pipeline validated successfully'));
+      logger.info('Pipeline validated successfully');
       
       if (options.dryRun) {
-        console.log(chalk.yellow('Dry run mode - pipeline will not be executed'));
-        console.log('\nPipeline structure:');
-        console.log(`  Name: ${pipeline.name || 'Unnamed'}`);
-        console.log(`  Nodes: ${pipeline.nodes.length}`);
+        logger.dryRun();
+        console.log(chalk.bold('Pipeline Structure:'));
+        logger.validationInfo('Name', pipeline.name || 'Unnamed');
+        logger.validationInfo('Nodes', pipeline.nodes.length.toString());
         for (const node of pipeline.nodes) {
-          console.log(`    - ${node.id} (${node.type})`);
+          console.log(chalk.dim(`  • ${node.id}`) + chalk.gray(` (${node.type})`));
         }
         return;
       }
       
-      const executor = new PipelineExecutor(options.apiKey);
+      const executor = new PipelineExecutor(options.apiKey, logger);
       const context = {
         workingDirectory: process.cwd(),
         environment: {},
@@ -58,17 +61,12 @@ program
       const result = await executor.execute(pipeline, context);
       
       if (result.success) {
-        console.log(chalk.green('\n✓ Pipeline completed successfully'));
         process.exit(0);
       } else {
-        console.error(chalk.red('\n✗ Pipeline failed'));
         process.exit(1);
       }
     } catch (error: any) {
-      console.error(chalk.red('\n✗ Error:'), error.message);
-      if (options.verbose) {
-        console.error(error.stack);
-      }
+      logger.error(error.message, error.stack);
       process.exit(1);
     }
   });
@@ -78,40 +76,44 @@ program
   .description('Validate a pipeline without executing it')
   .argument('<pipeline>', 'Path to pipeline YAML file')
   .action(async (pipelinePath: string) => {
+    const logger = new Logger(true);
+    
     try {
       const absolutePath = resolve(process.cwd(), pipelinePath);
       
-      console.log(chalk.blue(`Validating pipeline: ${absolutePath}`));
+      logger.validationStart(absolutePath);
       
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(absolutePath);
       
-      console.log(chalk.green('✓ Pipeline is valid'));
-      console.log('\nPipeline structure:');
-      console.log(`  Name: ${pipeline.name || 'Unnamed'}`);
-      console.log(`  Description: ${pipeline.description || 'None'}`);
-      console.log(`  Nodes: ${pipeline.nodes.length}`);
+      logger.validationSuccess();
+      console.log(chalk.bold('Pipeline Structure:'));
+      logger.validationInfo('Name', pipeline.name || 'Unnamed');
+      logger.validationInfo('Description', pipeline.description || 'None');
+      logger.validationInfo('Nodes', pipeline.nodes.length.toString());
       
       for (const node of pipeline.nodes) {
-        console.log(`\n  Node: ${node.id}`);
-        console.log(`    Type: ${node.type}`);
+        const details: string[] = [];
+        
         if (node.description) {
-          console.log(`    Description: ${node.description}`);
+          details.push(`Description: ${node.description}`);
         }
         
         if (node.type === 'task') {
-          console.log(`    Command: ${node.command}`);
+          details.push(`Command: ${node.command}`);
         } else if (node.type === 'agent') {
-          console.log(`    Tools: ${node.tools.join(', ')}`);
-          console.log(`    Output Schema: ${node.output_schema}`);
+          details.push(`Tools: ${node.tools.join(', ')}`);
+          details.push(`Output Schema: ${node.output_schema}`);
         } else if (node.type === 'gate') {
-          console.log(`    Command: ${node.command}`);
+          details.push(`Command: ${node.command}`);
         }
+        
+        logger.validationNode(node.id, node.type, details);
       }
       
       process.exit(0);
     } catch (error: any) {
-      console.error(chalk.red('\n✗ Validation failed:'), error.message);
+      logger.error('Validation failed', error.message);
       process.exit(1);
     }
   });

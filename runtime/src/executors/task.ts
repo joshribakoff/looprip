@@ -8,9 +8,15 @@ import { join } from 'path';
 import { TaskNode, NodeOutput, PipelineState, ExecutionContext } from '../types/index.js';
 import { NodeExecutor } from './base.js';
 import { TemplateEngine } from '../core/template.js';
+import { Logger } from '../utils/logger.js';
 
 export class TaskExecutor implements NodeExecutor {
   private templateEngine = new TemplateEngine();
+  private logger: Logger;
+
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
 
   async execute(
     node: TaskNode,
@@ -23,9 +29,7 @@ export class TaskExecutor implements NodeExecutor {
       // Interpolate command with current state
       const command = this.templateEngine.interpolate(node.command, state);
       
-      if (context.verbose) {
-        console.log(`Executing: ${command}`);
-      }
+      this.logger.taskCommand(command);
       
       // Get file modification times before execution if tracking changes
       const beforeFiles = node.track_changes 
@@ -51,6 +55,8 @@ export class TaskExecutor implements NodeExecutor {
       for (const file of changedFiles) {
         state.changedFiles.add(file);
       }
+      
+      this.logger.taskFilesChanged(changedFiles);
       
       const endTime = Date.now();
       

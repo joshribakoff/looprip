@@ -8,16 +8,19 @@ import { NodeExecutor } from './base.js';
 import { TemplateEngine } from '../core/template.js';
 import { SchemaParser } from '../core/schema.js';
 import { getTools } from '../tools/index.js';
+import { Logger } from '../utils/logger.js';
 
 export class AgentExecutor implements NodeExecutor {
   private templateEngine = new TemplateEngine();
   private schemaParser = new SchemaParser();
   private anthropic: Anthropic;
+  private logger: Logger;
 
-  constructor(apiKey?: string) {
+  constructor(apiKey?: string, logger?: Logger) {
     this.anthropic = new Anthropic({
       apiKey: apiKey || process.env.ANTHROPIC_API_KEY
     });
+    this.logger = logger || new Logger();
   }
 
   async execute(
@@ -37,10 +40,8 @@ export class AgentExecutor implements NodeExecutor {
       // Interpolate the prompt
       const prompt = this.templateEngine.interpolate(node.prompt, state);
       
-      if (context.verbose) {
-        console.log(`Agent prompt: ${prompt}`);
-        console.log(`Available tools: ${tools.map(t => t.name).join(', ')}`);
-      }
+      this.logger.agentPrompt(prompt);
+      this.logger.agentTools(tools.map(t => t.name));
       
       // Build the system prompt
       const systemPrompt = this.buildSystemPrompt(node, outputSchema, context);
@@ -127,10 +128,7 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
         tools: anthropicTools
       });
 
-      if (context.verbose) {
-        console.log(`Agent iteration ${i + 1}/${maxIterations}`);
-        console.log(`Stop reason: ${response.stop_reason}`);
-      }
+      this.logger.agentIteration(i + 1, maxIterations);
 
       // Process the response
       if (response.stop_reason === 'end_turn') {
@@ -161,9 +159,7 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
         
         for (const block of response.content) {
           if (block.type === 'tool_use') {
-            if (context.verbose) {
-              console.log(`Tool call: ${block.name}(${JSON.stringify(block.input)})`);
-            }
+            this.logger.agentToolCall(block.name, block.input);
             
             const tool = tools.find(t => t.name === block.name);
             if (!tool) {
@@ -173,9 +169,7 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
             try {
               const result = await tool.handler(block.input, context);
               
-              if (context.verbose) {
-                console.log(`Tool result: ${JSON.stringify(result).slice(0, 200)}`);
-              }
+              this.logger.agentToolResult(result);
               
               (toolResults.content as Anthropic.ToolResultBlockParam[]).push({
                 type: 'tool_result',

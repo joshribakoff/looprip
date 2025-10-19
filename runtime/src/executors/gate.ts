@@ -6,9 +6,15 @@ import { spawn } from 'child_process';
 import { GateNode, NodeOutput, PipelineState, ExecutionContext } from '../types/index.js';
 import { NodeExecutor } from './base.js';
 import { TemplateEngine } from '../core/template.js';
+import { Logger } from '../utils/logger.js';
 
 export class GateExecutor implements NodeExecutor {
   private templateEngine = new TemplateEngine();
+  private logger: Logger;
+
+  constructor(logger: Logger) {
+    this.logger = logger;
+  }
 
   async execute(
     node: GateNode,
@@ -21,9 +27,7 @@ export class GateExecutor implements NodeExecutor {
       // Interpolate command with current state
       const command = this.templateEngine.interpolate(node.command, state);
       
-      if (context.verbose) {
-        console.log(`Gate check: ${command}`);
-      }
+      this.logger.gateCheck(command);
       
       // Execute the command
       await this.runCommand(
