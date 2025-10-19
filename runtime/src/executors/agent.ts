@@ -26,7 +26,7 @@ export class AgentExecutor implements NodeExecutor {
   async execute(
     node: AgentNode,
     state: PipelineState,
-    context: ExecutionContext,
+    _context: ExecutionContext,
   ): Promise<NodeOutput> {
     const startTime = Date.now();
 
@@ -44,10 +44,10 @@ export class AgentExecutor implements NodeExecutor {
       this.logger.agentTools(tools.map((t) => t.name));
 
       // Build the system prompt
-      const systemPrompt = this.buildSystemPrompt(node, outputSchema, context);
+      const systemPrompt = this.buildSystemPrompt(node, outputSchema);
 
       // Run the agent
-      const result = await this.runAgent(prompt, systemPrompt, tools, outputSchema, context);
+      const result = await this.runAgent(prompt, systemPrompt, tools, outputSchema, _context);
 
       const endTime = Date.now();
 
@@ -73,26 +73,6 @@ export class AgentExecutor implements NodeExecutor {
         duration: endTime - startTime,
       };
     }
-  }
-
-  private buildSystemPrompt(
-    node: AgentNode,
-    outputSchema: any,
-    _context: ExecutionContext,
-  ): string {
-    const systemPromptText = `You are an AI agent executing a task as part of an automated pipeline.
-
-Your role: ${node.description || "Execute the user's request"}
-
-You have access to the following tools:
-${node.tools.join(', ')}
-
-CRITICAL: You MUST produce output that matches this exact JSON schema:
-${JSON.stringify(outputSchema.toJsonSchema(), null, 2)}
-
-Return ONLY valid JSON matching this schema. Do not include any explanatory text outside the JSON.`;
-
-    return systemPromptText;
   }
 
   private async runAgent(

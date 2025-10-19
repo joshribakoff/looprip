@@ -74,7 +74,7 @@ export function createInitialState(params: { cwd: string }): UIState {
   };
 }
 
-function reducer(state: UIState, action: UIAction): UIState {
+export function reducer(state: UIState, action: UIAction): UIState {
   switch (action.type) {
     // Navigation
     case 'NAVIGATE_UP':
