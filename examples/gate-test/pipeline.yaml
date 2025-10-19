@@ -1,0 +1,19 @@
+name: gate-test
+description: Test quality gate functionality
+
+nodes:
+  - id: create-file
+    type: task
+    description: Create a test file
+    command: echo "function test() { return 42; }" > test.js
+    
+  - id: check-syntax
+    type: gate
+    description: Verify JavaScript syntax is valid
+    command: node -c test.js
+    message: "JavaScript syntax check failed"
+    
+  - id: cleanup
+    type: task
+    description: Clean up test file
+    command: rm test.js

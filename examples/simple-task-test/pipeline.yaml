@@ -1,0 +1,13 @@
+name: simple-task-test
+description: Test basic task execution
+
+nodes:
+  - id: echo
+    type: task
+    description: Echo a message
+    command: echo "Hello from pipeline"
+    
+  - id: list
+    type: task
+    description: List current directory
+    command: ls -la

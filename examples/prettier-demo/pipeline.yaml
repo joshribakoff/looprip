@@ -1,0 +1,35 @@
+name: prettier-demo
+description: Format a TypeScript file with Prettier
+
+nodes:
+  - id: create-messy-code
+    type: task
+    description: Create a poorly formatted TypeScript file
+    command: |
+      cat > demo.ts << 'ENDCODE'
+      const   x=5;
+      function hello(name:string){return   "Hello, "+name+"!";}
+      const   arr=[1,2,3,4,5];
+      interface   User{name:string;age:number;}
+      ENDCODE
+    track_changes: true
+    
+  - id: show-before
+    type: task
+    description: Show the messy code
+    command: echo "=== BEFORE FORMATTING ===" && cat demo.ts
+    
+  - id: format
+    type: task
+    description: Format with Prettier
+    command: npx prettier --write demo.ts
+    
+  - id: show-after
+    type: task
+    description: Show the formatted code
+    command: echo "=== AFTER FORMATTING ===" && cat demo.ts
+    
+  - id: cleanup
+    type: task
+    description: Clean up
+    command: rm demo.ts

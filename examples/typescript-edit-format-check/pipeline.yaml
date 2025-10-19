@@ -1,14 +1,21 @@
 name: typescript-formatting-pipeline
+description: Edit TypeScript files with AI, then format and typecheck
 
 nodes:
   - id: agent-edit
     type: agent
+    description: Make code changes based on user request
+    prompt: "{{prompt}}"
     tools: [file_read, file_write]
+    output_schema: "{files_modified: array<string>}"
 
   - id: format
     type: task
+    description: Format modified files with Prettier
     command: npx prettier --write {{changed_files}}
     
   - id: typecheck
-    type: task
+    type: gate
+    description: Verify TypeScript compilation
     command: npx tsc --noEmit
+    message: "TypeScript compilation failed"

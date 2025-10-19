@@ -1,0 +1,14 @@
+name: file-tracking-test
+description: Test file change tracking and variable interpolation
+
+nodes:
+  - id: create-file
+    type: task
+    description: Create a test file
+    command: echo "test content" > test-file.txt
+    track_changes: true
+    
+  - id: verify
+    type: task
+    description: Verify the file was created and tracked
+    command: cat {{changed_files}}

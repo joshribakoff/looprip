@@ -1,17 +1,22 @@
 name: move-files-update-imports
+description: Move files and automatically update TypeScript imports
 
 nodes:
   - id: plan
     type: agent
+    description: Analyze files and plan moves
+    prompt: "{{prompt}}"
     tools: [file_list, file_read]
-    output_schema:
-      files_to_move: array<{source: string, destination: string}>
+    output_schema: "{files_to_move: array<{source: string, destination: string}>}"
 
   - id: move
     type: task
+    description: Move files to new locations
     command: mv {{plan.files_to_move[].source}} {{plan.files_to_move[].destination}}
 
   - id: update-imports
     type: agent
-    tools: [ts_morph]
-    context: {{plan.files_to_move}}
+    description: Update import statements in affected files
+    prompt: "Update all TypeScript import statements to reflect the moved files: {{plan.files_to_move}}"
+    tools: [file_read, file_write]
+    output_schema: "{files_updated: array<string>}"

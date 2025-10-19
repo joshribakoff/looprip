@@ -1,13 +1,15 @@
 name: move-files-to-subfolder
+description: Use AI to plan and execute file moves
 
 nodes:
   - id: plan
     type: agent
+    description: Determine which files to move and where
+    prompt: "{{prompt}}"
     tools: [file_list]
-    output_schema:
-      source: string
-      destination: string
+    output_schema: "{source: string, destination: string}"
 
   - id: move
     type: task
+    description: Execute the file move
     command: mv {{plan.source}} {{plan.destination}}
