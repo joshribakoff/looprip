@@ -9,17 +9,17 @@ A runtime for executing agentic pipelines defined in YAML. Build AI-powered work
 npm run build
 
 # Run a pipeline
-agent-pipeline run examples/simple-task-test/pipeline.yaml
+./p run examples/simple-task-test/pipeline.yaml
 
 # Run with a prompt for agent nodes
-agent-pipeline run examples/move-files-to-subfolder/pipeline.yaml \
+./p run examples/move-files-to-subfolder/pipeline.yaml \
   --prompt "Move all .txt files to a subfolder"
 
 # Validate a pipeline
-agent-pipeline validate examples/gate-test/pipeline.yaml
+./p validate examples/gate-test/pipeline.yaml
 ```
 
-**Note:** After running `npm link`, the `agent-pipeline` command will be available globally in your terminal.
+Tip: Use the short local runner `./p`. Alternatively, you can use an npm script: `npm run p -- run examples/simple-task-test/pipeline.yaml`.
 
 ## What Is This?
 
@@ -135,14 +135,14 @@ Results:
 
 Or pass via CLI:
 ```bash
-agent-pipeline run pipeline.yaml --api-key sk-...
+./p run pipeline.yaml --api-key sk-...
 ```
 
 ## CLI Commands
 
 ### Run a pipeline
 ```bash
-agent-pipeline run <pipeline.yaml> [options]
+./p run <pipeline.yaml> [options]
 
 Options:
   -p, --prompt <text>   User prompt for agent nodes
@@ -153,7 +153,7 @@ Options:
 
 ### Validate a pipeline
 ```bash
-agent-pipeline validate <pipeline.yaml>
+./p validate <pipeline.yaml>
 ```
 
 ## Why This Approach?
