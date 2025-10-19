@@ -1,5 +1,6 @@
 import React from 'react';
 import {Box, Text} from 'ink';
+import { LogView } from '../logger/InkLogger.js';
 
 type Props = {
   header: React.ReactNode;
@@ -19,6 +20,7 @@ export function StatusScreen({ header, mode, status, message, lastResultSuccess 
       <Box marginTop={1}>
         <Text>{message}</Text>
       </Box>
+      <LogView />
       {mode === 'summary' && (
         <Box marginTop={1}>
           <Text dimColor>{lastResultSuccess === true || lastResultSuccess === false ? 'Enter: back • q: quit' : 'q: quit'}</Text>

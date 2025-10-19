@@ -95,7 +95,8 @@ export class Logger {
     }
   }
 
-  agentToolCall(toolName: string, input: any) {
+  agentToolCall(toolName: string, _input?: any) {
+    void _input;
     if (this.verbose) {
       console.log(chalk.blue('│  ') + chalk.magenta('🔧 Tool: ') + chalk.white(toolName));
     }
@@ -168,5 +169,14 @@ export class Logger {
       default:
         return '📦';
     }
+  }
+
+  // Stream writers used by executors; override in Ink mode to avoid writing to TTY directly
+  writeStdout(text: string) {
+    process.stdout.write(text);
+  }
+
+  writeStderr(text: string) {
+    process.stderr.write(text);
   }
 }

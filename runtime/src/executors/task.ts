@@ -104,13 +104,13 @@ export class TaskExecutor implements NodeExecutor {
       child.stdout.on('data', (data) => {
         const text = data.toString();
         stdout += text;
-        process.stdout.write(text);
+        this.logger.writeStdout(text);
       });
 
       child.stderr.on('data', (data) => {
         const text = data.toString();
         stderr += text;
-        process.stderr.write(text);
+        this.logger.writeStderr(text);
       });
 
       child.on('close', (code) => {

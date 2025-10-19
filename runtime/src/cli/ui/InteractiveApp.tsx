@@ -14,6 +14,7 @@ import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 import { useCreatePromptValidation } from './hooks/useCreatePromptValidation.js';
 import { usePipelineRunner } from './hooks/usePipelineRunner.js';
 import { UIProvider, useUiDispatch, useUiState, actions } from './state/uiStore.js';
+import { LoggerProvider, useInkLogger } from './logger/InkLogger.js';
 
 function detectNeedsPrompt(pipeline: any): boolean {
   const containsPromptVar = (val: any): boolean => {
@@ -37,7 +38,8 @@ function AppInner() {
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const { mode, index, customPath, userPrompt, message, status, lastResultSuccess } = useUiState();
   const dispatch = useUiDispatch();
-  const { executePipeline } = usePipelineRunner();
+  const { logger } = useInkLogger();
+  const { executePipeline } = usePipelineRunner(logger);
   // Create-prompt validation state moved into hook
   const { defaultPath, createPathInfo } = useCreatePromptValidation({
     cwd,
@@ -218,7 +220,9 @@ export function InteractiveApp() {
   const cwd = process.cwd();
   return (
     <UIProvider cwd={cwd}>
-      <AppInner />
+      <LoggerProvider>
+        <AppInner />
+      </LoggerProvider>
     </UIProvider>
   );
 }

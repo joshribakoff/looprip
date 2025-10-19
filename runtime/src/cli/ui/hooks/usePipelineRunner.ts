@@ -7,9 +7,9 @@ type ExecuteContext = {
   userPrompt?: string;
 };
 
-export function usePipelineRunner() {
-  const logger = useMemo(() => new Logger(false), []);
-  const executor = useMemo(() => new PipelineExecutor(process.env.ANTHROPIC_API_KEY, logger), [logger]);
+export function usePipelineRunner(logger?: Logger) {
+  const effectiveLogger = useMemo(() => logger ?? new Logger(false), [logger]);
+  const executor = useMemo(() => new PipelineExecutor(process.env.ANTHROPIC_API_KEY, effectiveLogger), [effectiveLogger]);
 
   async function executePipeline(pipeline: any, ctx: ExecuteContext): Promise<{ success: boolean }> {
     const context = {
