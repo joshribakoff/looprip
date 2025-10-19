@@ -8,6 +8,7 @@ import {PipelineParser} from '../../core/parser.js';
 import {PipelineExecutor} from '../../executors/index.js';
 import {Logger} from '../../utils/logger.js';
 import { createPrompt } from '../createPrompt.js';
+import SelectScreen from './screens/SelectScreen.js';
 
 type PipelineChoice = { title: string; value: string };
 
@@ -303,28 +304,6 @@ export function InteractiveApp() {
 
   // Select mode
   return (
-    <Box flexDirection="column">
-      {header}
-      {notice && (
-        <Box marginTop={1}>
-          <Text color={notice.color}>{notice.text}</Text>
-        </Box>
-      )}
-      <Box marginTop={1} flexDirection="column">
-        {choices.length === 0 ? (
-          <Text dimColor>No pipeline files found. Press "r" to refresh or use custom path.</Text>
-        ) : (
-          choices.map((c, i) => (
-            <Text key={c.value} color={i === index ? 'cyan' : undefined}>
-              {i === index ? '› ' : '  '}
-              {c.title}
-            </Text>
-          ))
-        )}
-      </Box>
-      <Box marginTop={1}>
-        <Text dimColor>↑/↓: navigate • Enter: select • r: refresh • q: quit</Text>
-      </Box>
-    </Box>
+    <SelectScreen header={header} choices={choices} index={index} notice={notice} />
   );
 }
