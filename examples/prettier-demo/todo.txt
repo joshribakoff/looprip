@@ -1,3 +1,0 @@
-This pipeline has the prettier command hardcoded to format demo.ts, but instead the system is supposed to track which files it automatically created and then run prettier on those. So there should be some magic variable like "changed files" or something instead of hardcoding the path to the file. 
-
-I see `examples/typescript-edit-format-check/pipeline.yaml` has the "Changed files" Syntax 

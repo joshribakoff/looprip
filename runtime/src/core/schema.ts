@@ -1,18 +1,107 @@
 /**
  * Schema parser and validator
  * 
- * Parses schema strings like:
- * - "string"
- * - "number"
- * - "boolean"
- * - "array<string>"
- * - "array<{source: string, destination: string}>"
+ * Supports JSON Schema format for defining agent output schemas.
+ * Uses Zod internally for robust runtime validation.
  */
 
+import { z } from 'zod';
 import { ParsedSchema } from '../types/index.js';
 
 export class SchemaParser {
-  parse(schemaStr: string): ParsedSchema {
+  /**
+   * Parse a schema definition (either JSON Schema object or legacy string format)
+   */
+  parse(schema: any): ParsedSchema {
+    // If it's an object, treat it as JSON Schema
+    if (typeof schema === 'object' && schema !== null) {
+      return this.parseJsonSchema(schema);
+    }
+    
+    // Legacy string format support (for backward compatibility)
+    if (typeof schema === 'string') {
+      return this.parseLegacyString(schema);
+    }
+    
+    throw new Error(`Invalid schema: ${JSON.stringify(schema)}`);
+  }
+
+  /**
+   * Parse JSON Schema and create a Zod validator
+   */
+  private parseJsonSchema(jsonSchema: any): ParsedSchema {
+    const zodSchema = this.jsonSchemaToZod(jsonSchema);
+    
+    return {
+      type: jsonSchema.type || 'object',
+      validate: (value: any) => {
+        try {
+          zodSchema.parse(value);
+          return { valid: true };
+        } catch (error: any) {
+          return {
+            valid: false,
+            errors: error.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`) || [error.message]
+          };
+        }
+      },
+      toJsonSchema: () => jsonSchema
+    };
+  }
+
+  /**
+   * Convert JSON Schema to Zod schema for validation
+   */
+  private jsonSchemaToZod(schema: any): z.ZodType {
+    if (!schema.type) {
+      throw new Error('Schema must have a type property');
+    }
+
+    switch (schema.type) {
+      case 'string':
+        return z.string();
+      
+      case 'number':
+        return z.number();
+      
+      case 'boolean':
+        return z.boolean();
+      
+      case 'array':
+        if (!schema.items) {
+          return z.array(z.any());
+        }
+        return z.array(this.jsonSchemaToZod(schema.items));
+      
+      case 'object': {
+        if (!schema.properties) {
+          return z.object({});
+        }
+        
+        const shape: Record<string, z.ZodType> = {};
+        for (const [key, propSchema] of Object.entries(schema.properties)) {
+          let zodType = this.jsonSchemaToZod(propSchema as any);
+          
+          // Make optional if not in required array
+          if (!schema.required || !schema.required.includes(key)) {
+            zodType = zodType.optional();
+          }
+          
+          shape[key] = zodType;
+        }
+        
+        return z.object(shape);
+      }
+      
+      default:
+        throw new Error(`Unsupported schema type: ${schema.type}`);
+    }
+  }
+
+  /**
+   * Legacy string format parser (for backward compatibility)
+   */
+  private parseLegacyString(schemaStr: string): ParsedSchema {
     const trimmed = schemaStr.trim();
     
     // Handle primitive types

@@ -29,7 +29,7 @@ export interface AgentNode extends BaseNode {
   model?: string;
   prompt: string;
   tools: string[];
-  output_schema: string;
+  output_schema: string | object; // JSON Schema object or legacy string format
   context?: {
     include_changed_files?: boolean;
     include_previous_outputs?: boolean;

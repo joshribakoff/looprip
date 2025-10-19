@@ -5,21 +5,27 @@ A runtime for executing agentic pipelines defined in YAML. Build AI-powered work
 ## Quick Start
 
 ```bash
-# Install dependencies
+# Install and build
 cd runtime
 npm install
 npm run build
 
-# Run a pipeline
-node dist/cli/index.js run ../examples/simple-task-test/pipeline.yaml
+# Link the CLI globally (makes 'agent-pipeline' command available)
+npm link
+
+# Run a pipeline from the project root
+cd ..
+agent-pipeline run examples/simple-task-test/pipeline.yaml
 
 # Run with a prompt for agent nodes
-node dist/cli/index.js run ../examples/move-files-to-subfolder/pipeline.yaml \
+agent-pipeline run examples/move-files-to-subfolder/pipeline.yaml \
   --prompt "Move all .txt files to a subfolder"
 
 # Validate a pipeline
-node dist/cli/index.js validate ../examples/gate-test/pipeline.yaml
+agent-pipeline validate examples/gate-test/pipeline.yaml
 ```
+
+**Note:** After running `npm link`, the `agent-pipeline` command will be available globally in your terminal.
 
 ## What Is This?
 
@@ -31,36 +37,19 @@ A system for building **constrained agentic workflows** where:
 - 🔒 **Tool sandboxing** - Agents only access declared tools
 - 📊 **Structured output** - Type-safe data flow between nodes
 
-## Example Pipeline
+## Examples
 
-```yaml
-name: typescript-formatting-pipeline
-description: Edit TypeScript files with AI, then format and typecheck
+See the [examples/](examples/) directory for working pipeline demonstrations:
 
-nodes:
-  - id: agent-edit
-    type: agent
-    description: Make code changes based on user request
-    prompt: "{{prompt}}"
-    tools: [file_read, file_write]
-    output_schema: "{files_modified: array<string>}"
+- **[simple-task-test](examples/simple-task-test/)** - Basic task execution
+- **[file-tracking-test](examples/file-tracking-test/)** - Track file changes across tasks
+- **[gate-test](examples/gate-test/)** - Quality gate validation
+- **[move-files-to-subfolder](examples/move-files-to-subfolder/)** - Agent-driven file organization
+- **[move-files-update-imports](examples/move-files-update-imports/)** - Refactoring with import updates
+- **[typescript-edit-format-check](examples/typescript-edit-format-check/)** - Full AI edit → format → typecheck workflow
+- **[prettier-demo](examples/prettier-demo/)** - Automated code formatting
 
-  - id: format
-    type: task
-    description: Format modified files with Prettier
-    command: npx prettier --write {{changed_files}}
-    
-  - id: typecheck
-    type: gate
-    description: Verify TypeScript compilation
-    command: npx tsc --noEmit
-    message: "TypeScript compilation failed"
-```
-
-Run it:
-```bash
-agent-pipeline run pipeline.yaml --prompt "Add JSDoc comments to all exported functions"
-```
+Each example includes a `pipeline.yaml` and documentation.
 
 ## Key Features
 
@@ -82,33 +71,11 @@ agent-pipeline run pipeline.yaml --prompt "Add JSDoc comments to all exported fu
 
 ### Variable Interpolation
 
-Access data from previous nodes:
-
-```yaml
-# Simple variable
-command: echo {{prompt}}
-
-# Node output
-command: mv {{plan.source}} {{plan.destination}}
-
-# Array expansion
-command: mv {{plan.files[].source}} {{plan.files[].destination}}
-
-# Changed files tracking
-command: npx prettier --write {{changed_files}}
-```
+Access data from previous nodes using template variables. See [examples/move-files-to-subfolder](examples/move-files-to-subfolder/) and [examples/typescript-edit-format-check](examples/typescript-edit-format-check/) for working examples.
 
 ### Schema Validation
 
-Agents must produce structured output:
-
-```yaml
-output_schema: "string"
-output_schema: "{name: string, age: number}"
-output_schema: "array<{source: string, destination: string}>"
-```
-
-The runtime validates outputs match the schema.
+Agents produce structured output validated against defined schemas. See examples for schema usage patterns.
 
 ## Project Structure
 

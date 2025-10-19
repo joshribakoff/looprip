@@ -7,7 +7,14 @@ nodes:
     description: Make code changes based on user request
     prompt: "{{prompt}}"
     tools: [file_read, file_write]
-    output_schema: "{files_modified: array<string>}"
+    output_schema:
+      type: object
+      properties:
+        files_modified:
+          type: array
+          items:
+            type: string
+      required: [files_modified]
 
   - id: format
     type: task
