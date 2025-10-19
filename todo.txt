@@ -1,0 +1,3 @@
+Just reference the examples folder, don't put a bunch of inline examples in the README. 
+
+Try to run the examples in the "Readme". It says the command "agent-pipeline" is not found. 
