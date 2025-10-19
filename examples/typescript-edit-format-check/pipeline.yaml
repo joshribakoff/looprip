@@ -1,0 +1,14 @@
+name: typescript-formatting-pipeline
+
+nodes:
+  - id: agent-edit
+    type: agent
+    tools: [file_read, file_write]
+
+  - id: format
+    type: task
+    command: npx prettier --write {{changed_files}}
+    
+  - id: typecheck
+    type: task
+    command: npx tsc --noEmit

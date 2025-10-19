@@ -1,0 +1,17 @@
+name: move-files-update-imports
+
+nodes:
+  - id: plan
+    type: agent
+    tools: [file_list, file_read]
+    output_schema:
+      files_to_move: array<{source: string, destination: string}>
+
+  - id: move
+    type: task
+    command: mv {{plan.files_to_move[].source}} {{plan.files_to_move[].destination}}
+
+  - id: update-imports
+    type: agent
+    tools: [ts_morph]
+    context: {{plan.files_to_move}}

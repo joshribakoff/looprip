@@ -1,0 +1,13 @@
+name: move-files-to-subfolder
+
+nodes:
+  - id: plan
+    type: agent
+    tools: [file_list]
+    output_schema:
+      source: string
+      destination: string
+
+  - id: move
+    type: task
+    command: mv {{plan.source}} {{plan.destination}}
