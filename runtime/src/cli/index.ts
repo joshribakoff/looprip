@@ -15,6 +15,7 @@ import path from 'path';
 import { render } from 'ink';
 import React from 'react';
 import { InteractiveApp } from './ui/InteractiveApp.js';
+import { createPrompt } from './createPrompt.js';
 
 const program = new Command();
 
@@ -74,6 +75,34 @@ program
       logger.error(error.message, error.stack);
       process.exit(1);
     }
+  });
+
+// Prompt creation command: fast scaffold of a Markdown prompt file
+const promptCmd = program
+  .command('prompt')
+  .description('Prompt utilities');
+
+promptCmd
+  .command('create')
+  .description('Create a new prompt Markdown file')
+  .argument('[nameOrPath]', 'Bare name (without .md) or a relative/absolute path')
+  .option('-d, --dir <dir>', 'Directory to place prompt when using a bare name', 'prompts')
+  .option('--open', 'Open the created file in VS Code', false)
+  .action(async (nameOrPath: string | undefined, options: any) => {
+    const { filePath, created } = await createPrompt({
+      cwd: process.cwd(),
+      input: nameOrPath,
+      dir: options.dir,
+      openInEditor: !!options.open,
+    });
+    const rel = path.relative(process.cwd(), filePath) || filePath;
+    if (created) {
+      console.log(chalk.green('Created:'), rel);
+    } else {
+      console.log(chalk.yellow('Exists:'), rel);
+    }
+    // Print absolute path so terminals can cmd-click
+    console.log(path.resolve(filePath));
   });
 
 // Helper: recursively find pipeline files (pipeline.yaml|yml) under cwd

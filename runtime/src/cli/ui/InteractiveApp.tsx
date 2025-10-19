@@ -7,6 +7,7 @@ import chalk from 'chalk';
 import {PipelineParser} from '../../core/parser.js';
 import {PipelineExecutor} from '../../executors/index.js';
 import {Logger} from '../../utils/logger.js';
+import { createPrompt } from '../createPrompt.js';
 
 type PipelineChoice = { title: string; value: string };
 
@@ -45,7 +46,7 @@ function detectNeedsPrompt(pipeline: any): boolean {
   return containsPromptVar(pipeline);
 }
 
-type Mode = 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary';
+type Mode = 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt';
 
 export function InteractiveApp() {
   const {exit} = useApp();
@@ -58,13 +59,16 @@ export function InteractiveApp() {
   const [message, setMessage] = useState<string>('');
   const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
   const [lastResultSuccess, setLastResultSuccess] = useState<boolean | null>(null);
+  // Create-prompt validation state
+  const [createPathInfo, setCreatePathInfo] = useState<{ rel: string; abs: string; exists: boolean } | null>(null);
 
   // Load choices on mount, and refresh on "r"
   const refreshChoices = async () => {
     const found = await findPipelineFiles(cwd);
     const nextChoices: PipelineChoice[] = [
       ...found.map((abs) => ({ title: path.relative(cwd, abs) || abs, value: abs })),
-      { title: 'Enter custom path…', value: '__custom__' }
+      { title: 'Enter custom path…', value: '__custom__' },
+      { title: 'Create new prompt…', value: '__create_prompt__' },
     ];
     setChoices(nextChoices);
     if (index >= nextChoices.length) setIndex(Math.max(0, nextChoices.length - 1));
@@ -73,6 +77,25 @@ export function InteractiveApp() {
   useEffect(() => {
     void refreshChoices();
   }, []);
+
+  // Helper for .md normalization (mirrors CLI behavior)
+  const ensureMd = (fp: string) => (fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`);
+
+  // Live-validate the target prompt path when in create-prompt mode
+  useEffect(() => {
+    if (mode !== 'create-prompt') return;
+    let cancelled = false;
+    const defaultPath = path.join('prompts', 'new-prompt.md');
+    const typed = (customPath && customPath.trim()) || defaultPath;
+    const normalized = ensureMd(typed);
+    const abs = path.resolve(cwd, normalized);
+    const rel = path.relative(cwd, abs) || abs;
+    (async () => {
+      const exists = await fs.stat(abs).then((s) => s.isFile()).catch(() => false);
+      if (!cancelled) setCreatePathInfo({ rel, abs, exists });
+    })();
+    return () => { cancelled = true; };
+  }, [mode, customPath]);
 
   useInput((input: string, key: any) => {
     if (mode === 'select') {
@@ -96,6 +119,10 @@ export function InteractiveApp() {
     if (!choice) return;
     if (choice.value === '__custom__') {
       setMode('custom-path');
+      return;
+    }
+    if (choice.value === '__create_prompt__') {
+      setMode('create-prompt');
       return;
     }
     await runPipeline(choice.value);
@@ -162,6 +189,54 @@ export function InteractiveApp() {
       <Text dimColor>q: quit</Text>
     </Box>
   );
+
+  if (mode === 'create-prompt') {
+    const defaultPath = path.join('prompts', 'new-prompt.md');
+    const info = createPathInfo;
+    const invalid = !!info?.exists;
+    return (
+      <Box flexDirection="column">
+        {header}
+        <Box marginTop={1}>
+          <Text>New prompt path (edit if desired): </Text>
+          <TextInput
+            value={customPath || defaultPath}
+            onChange={setCustomPath}
+            onSubmit={async (val: string) => {
+              const typed = (val.trim() || defaultPath);
+              const normalized = ensureMd(typed);
+              const absPath = path.resolve(cwd, normalized);
+              const exists = await fs.stat(absPath).then((s) => s.isFile()).catch(() => false);
+              if (exists) {
+                // Do not proceed when file exists
+                setStatus('error');
+                setMessage(chalk.red(`File already exists: ${path.relative(cwd, absPath) || absPath}`));
+                setMode('summary');
+                return;
+              }
+              const result = await createPrompt({ cwd, input: normalized, openInEditor: true });
+              const rel = path.relative(cwd, result.filePath) || result.filePath;
+              const abs = path.resolve(result.filePath);
+              setMessage(chalk.green(`Prompt created: ${rel}\n${abs}`));
+              setMode('summary');
+            }}
+          />
+        </Box>
+        {info && (
+          <Box marginTop={1}>
+            <Text color={info.exists ? 'red' : 'green'}>
+              {info.exists ? 'Already exists: ' : 'Will create: '}{info.rel}
+            </Text>
+          </Box>
+        )}
+        <Box marginTop={1}>
+          <Text dimColor>
+            {invalid ? 'Pick a different name. ' : 'Enter: create. '}Tip: Use backspace to change folder/name. Esc: back
+          </Text>
+        </Box>
+      </Box>
+    );
+  }
 
   if (mode === 'custom-path') {
     return (

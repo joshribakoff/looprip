@@ -35,6 +35,19 @@ Tips:
 - Get help: `p --help`
 - Local fallback: `npm run p -- run examples/simple-task-test/pipeline.yaml`
 
+### Create a prompt super fast
+
+```bash
+# Bare name goes into prompts/ and .md is added automatically
+p prompt create "feature-spec" --open
+
+# Or specify a relative/absolute path
+p prompt create prompts/ideas/brainstorm.md --open
+```
+
+Interactive option:
+- Run `p`, then choose "Create new prompt…". The path is prefilled with `prompts/new-prompt.md`; backspace to rename/move. It prints the absolute path so you can Cmd+Click to open if not using `--open`.
+
 ## API key (agents)
 
 Set your Anthropic API key if you use agent nodes:
