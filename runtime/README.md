@@ -12,6 +12,18 @@ npm run build
 
 ## Usage
 
+### Interactive mode
+
+Arrow-key through commands and pick a pipeline file discovered in your workspace.
+
+```bash
+# From repo root
+npx tsx src/cli/index.js interactive
+
+# Or if installed globally as a binary
+agent-pipeline interactive
+```
+
 ### Run a pipeline
 
 ```bash

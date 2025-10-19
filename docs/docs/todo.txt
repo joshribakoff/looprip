@@ -1,0 +1,7 @@
+Let's start breaking this down into separate sections for the concepts, because it's hard to follow. In general, let's make everything more succinct and easy to follow. While you're breaking it up, make it more simple. 
+
+For example, when they're on the intro, and there's like the examples that could almost be like three separate pages, they could just skip over if they already got it from the first example. 
+
+Also, this DocuSource website has no homepage. It's just a 404 page until you click on the "Docs" link. 
+
+Maybe there should be a little home page with a "Get Started" button or something. 
