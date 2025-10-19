@@ -21,7 +21,10 @@ Examples live under `examples/`, docs source under `docs/`.
 ## How to build, run, and test
 
 - Never create VS Code tasks. Use npm scripts only.
-- When running tests in CI/non-interactive environments, always use `--run` flag: `npm test -- --run`
+- **IMPORTANT: Always run tests with `--run` flag to avoid hanging in watch mode**
+  - ✅ Correct: `npm test` (configured with `--run` by default)
+  - ✅ Correct: `npm run test:unit` or `npm run test:integration`
+  - ❌ Wrong: `npm --prefix runtime test` without `--run` (will hang in watch mode)
 
 - Install CLI once from repo root:
   - `npm run install:cli`
@@ -37,8 +40,9 @@ Examples live under `examples/`, docs source under `docs/`.
 - Dev loop in `runtime/` (via workspace scripts):
   - `npm run runtime:dev` (type-check watch)
   - `npm run runtime:build` (compile TypeScript)
-  - `npm run runtime:test` (Vitest in watch mode)
-  - `npm run runtime:test -- --run` (Vitest in CI mode, non-interactive)
+  - `npm test` (runs all tests: unit + integration, concurrently)
+  - `npm run test:unit` (runs only unit tests)
+  - `npm run test:integration` (runs only integration tests, uses tsx to test against source)
   - `npm run runtime:lint`
 
 Environment:
@@ -177,10 +181,13 @@ If you’re an AI co-pilot, keep changes minimal, link to upstream docs, and run
 
 From repo root:
 
+- `npm test` — run all tests (unit + integration) concurrently with vitest.
+- `npm run test:unit` — run only unit tests.
+- `npm run test:integration` — run only integration tests (spawns child processes, tests against source with tsx).
 - `npm run interactive` — launch interactive TUI.
 - `npm run run -- <pipeline>` — run a pipeline (passes through to `p run`).
 - `npm run validate -- <pipeline>` — validate a pipeline.
 - `npm run prompt:create -- [nameOrPath]` — create a Markdown prompt file.
-- `npm run runtime:build` / `runtime:dev` / `runtime:test` / `runtime:lint` — work on the runtime package.
+- `npm run runtime:build` / `runtime:dev` / `runtime:lint` — work on the runtime package.
 
 Do not add tasks.json or VS Code tasks; use these scripts for repeatable workflows.
