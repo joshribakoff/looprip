@@ -27,7 +27,9 @@ status: draft
 `;
 
 function isPathLike(input: string): boolean {
-  return input.includes('/') || input.includes('\\') || input.startsWith('.') || input.startsWith('~');
+  return (
+    input.includes('/') || input.includes('\\') || input.startsWith('.') || input.startsWith('~')
+  );
 }
 
 function ensureMd(filePath: string): string {
@@ -70,11 +72,16 @@ export async function createPrompt(options: CreatePromptOptions = {}): Promise<C
         let ok = true;
         try {
           const child = spawn(cmd, args, { stdio: 'ignore', detached: true });
-          child.on('error', () => { ok = false; resolve(false); });
+          child.on('error', () => {
+            ok = false;
+            resolve(false);
+          });
           // If spawn succeeds synchronously, unref and resolve true on next tick
           child.unref();
           // Resolve true if no immediate error
-          setImmediate(() => { if (ok) resolve(true); });
+          setImmediate(() => {
+            if (ok) resolve(true);
+          });
         } catch {
           resolve(false);
         }

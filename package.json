@@ -10,22 +10,43 @@
   "scripts": {
     "build": "./scripts/build.sh",
     "test": "npm --prefix runtime test -- --run",
-    "test:all": "./test.sh",
+    "test:unit": "npm --prefix runtime run test:unit",
+    "test:integration": "npm run build && npm --prefix runtime run test:integration",
+    "test:all": "npm run build && npm --prefix runtime run test:all",
     "clean": "cd runtime && npm run clean",
-    "lint": "(cd runtime && npm run lint:prompts && npm run lint)",
     "p": "./p",
     "install:cli": "bash ./scripts/install.sh",
-    "runtime:build": "npm -w runtime run build",
-    "runtime:dev": "npm -w runtime run dev",
-    "runtime:test": "npm -w runtime test",
-    "runtime:lint": "npm -w runtime run lint",
-    "interactive": "npm -w runtime run interactive",
+    "runtime:build": "npm --prefix runtime run build",
+    "runtime:dev": "npm --prefix runtime run dev",
+    "runtime:test": "npm --prefix runtime test",
+    "runtime:lint": "npm --prefix runtime run lint",
+    "interactive": "npm --prefix runtime run interactive",
     "agent": "env-cmd -f ./.env npm --prefix runtime run agent",
-    "run": "npm -w runtime run cli -- run",
-    "validate": "npm -w runtime run cli -- validate",
-    "prompt:create": "npm -w runtime run prompt:create"
+    "run": "npm --prefix runtime run cli -- run",
+    "validate": "npm --prefix runtime run cli -- validate",
+    "prompt:create": "npm --prefix runtime run prompt:create",
+    "format": "bash ./scripts/format.sh",
+    "lint": "bash ./scripts/lint.sh",
+    "prepare": "husky install || true",
+    "lint:staged": "lint-staged"
   },
   "devDependencies": {
-    "env-cmd": "^10.1.0"
+    "concurrently": "^9.1.2",
+    "env-cmd": "^10.1.0",
+    "husky": "^9.1.6",
+    "@typescript-eslint/eslint-plugin": "^7.0.0",
+    "@typescript-eslint/parser": "^7.0.0",
+    "eslint": "^8.56.0",
+    "eslint-config-prettier": "^9.1.0",
+    "lint-staged": "^15.2.10",
+    "prettier": "^3.3.3"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,md,mdx,json,yaml,yml}": [
+      "prettier --write"
+    ],
+    "runtime/src/**/*.{ts,tsx}": [
+      "eslint --fix --resolve-plugins-relative-to . -c runtime/.eslintrc.json"
+    ]
   }
 }

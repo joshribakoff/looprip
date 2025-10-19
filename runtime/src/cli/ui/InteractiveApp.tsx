@@ -1,8 +1,8 @@
-import React, {useEffect} from 'react';
-import {Box, Text, useInput, useApp, Spacer} from 'ink';
+import React, { useEffect } from 'react';
+import { Box, Text, useInput, useApp, Spacer } from 'ink';
 import path from 'path';
 import fs from 'fs/promises';
-import {PipelineParser} from '../../core/parser.js';
+import { PipelineParser } from '../../core/parser.js';
 import MainMenuScreen, { MAIN_MENU_CHOICES } from './screens/MainMenuScreen.js';
 import SelectScreen from './screens/SelectScreen.js';
 import SelectPromptScreen from './screens/SelectPromptScreen.js';
@@ -30,11 +30,12 @@ function detectNeedsPrompt(pipeline: any): boolean {
 // Mode type is defined in the UI store; local alias removed
 
 function AppInner() {
-  const {exit} = useApp();
+  const { exit } = useApp();
   const cwd = process.cwd();
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const { choices: promptChoices, refreshChoices: refreshPromptChoices } = usePromptDiscovery(cwd);
-  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset } = useUiState();
+  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset } =
+    useUiState();
   const dispatch = useUiDispatch();
   const { logger } = useInkLogger();
   const { executePipeline } = usePipelineRunner(logger);
@@ -119,7 +120,10 @@ function AppInner() {
   };
 
   const runPipeline = async (selectedPath: string) => {
-    const exists = await fs.stat(selectedPath).then((s) => s.isFile()).catch(() => false);
+    const exists = await fs
+      .stat(selectedPath)
+      .then((s) => s.isFile())
+      .catch(() => false);
     if (!exists) {
       dispatch(actions.pipelineNotFound(selectedPath));
       return;
@@ -134,8 +138,16 @@ function AppInner() {
         return;
       }
       dispatch(actions.pipelineExecutionStarted());
-      const { success } = await executePipeline(pipeline, { cwd, userPrompt: userPrompt || undefined });
-      dispatch(actions.pipelineCompleted(success, success ? '✔ Pipeline completed' : '✖ Pipeline failed'));
+      const { success } = await executePipeline(pipeline, {
+        cwd,
+        userPrompt: userPrompt || undefined,
+      });
+      dispatch(
+        actions.pipelineCompleted(
+          success,
+          success ? '✔ Pipeline completed' : '✖ Pipeline failed',
+        ),
+      );
     } catch (err: any) {
       dispatch(actions.pipelineFailed(err?.message || String(err)));
     }
@@ -145,7 +157,12 @@ function AppInner() {
     try {
       dispatch(actions.promptExecutionStarted(selectedPath));
       const { success } = await executePrompt(selectedPath);
-      dispatch(actions.promptExecutionCompleted(success, success ? '✔ Prompt executed successfully' : '✖ Prompt execution failed'));
+      dispatch(
+        actions.promptExecutionCompleted(
+          success,
+          success ? '✔ Prompt executed successfully' : '✖ Prompt execution failed',
+        ),
+      );
     } catch (err: any) {
       dispatch(actions.promptExecutionFailed(err?.message || String(err)));
     }
@@ -176,9 +193,7 @@ function AppInner() {
   );
 
   if (mode === 'main-menu') {
-    return wrapInBorder(
-      <MainMenuScreen header={header} index={index} notice={notice} />
-    );
+    return wrapInBorder(<MainMenuScreen header={header} index={index} notice={notice} />);
   }
 
   if (mode === 'create-prompt') {
@@ -187,7 +202,7 @@ function AppInner() {
 
   if (mode === 'select-prompt') {
     return wrapInBorder(
-      <SelectPromptScreen header={header} choices={promptChoices} index={index} notice={notice} />
+      <SelectPromptScreen header={header} choices={promptChoices} index={index} notice={notice} />,
     );
   }
 
@@ -202,7 +217,7 @@ function AppInner() {
           const abs = path.resolve(cwd, val.trim());
           void runPipeline(abs);
         }}
-      />
+      />,
     );
   }
 
@@ -214,7 +229,7 @@ function AppInner() {
         onChange={(v: string) => dispatch(actions.inputChanged('userPrompt', v))}
         onBack={() => dispatch(actions.returnFromScreen())}
         onSubmit={() => onSubmitPrompt()}
-      />
+      />,
     );
   }
 
@@ -227,13 +242,13 @@ function AppInner() {
         message={message}
         lastResultSuccess={lastResultSuccess}
         scrollOffset={scrollOffset}
-      />
+      />,
     );
   }
 
   // Select mode
   return wrapInBorder(
-    <SelectScreen header={header} choices={choices} index={index} notice={notice} />
+    <SelectScreen header={header} choices={choices} index={index} notice={notice} />,
   );
 }
 

@@ -1,7 +1,15 @@
-import React, {createContext, useContext, useReducer} from 'react';
+import React, { createContext, useContext, useReducer } from 'react';
 
 // Shared UI mode across screens
-export type Mode = 'main-menu' | 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt' | 'select-prompt';
+export type Mode =
+  | 'main-menu'
+  | 'select'
+  | 'custom-path'
+  | 'enter-prompt'
+  | 'running'
+  | 'summary'
+  | 'create-prompt'
+  | 'select-prompt';
 
 export type Notice = { text: string; color?: 'green' | 'red' | 'yellow' } | null;
 
@@ -74,7 +82,14 @@ export function reducer(state: UIState, action: UIAction): UIState {
     case 'NAVIGATE_DOWN':
       return { ...state, index: state.index < action.maxIndex ? state.index + 1 : 0 };
     case 'NAVIGATE_TO_MAIN_MENU':
-      return { ...state, mode: 'main-menu', index: 0, notice: null, customPath: '', userPrompt: '' };
+      return {
+        ...state,
+        mode: 'main-menu',
+        index: 0,
+        notice: null,
+        customPath: '',
+        userPrompt: '',
+      };
     case 'NAVIGATE_TO_SELECT_PIPELINE':
       return { ...state, mode: 'select', index: 0, notice: null };
     case 'NAVIGATE_TO_SELECT_PROMPT':
@@ -87,7 +102,7 @@ export function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, mode: 'enter-prompt', message: action.pipelinePath, status: 'idle' };
     case 'RETURN_FROM_SCREEN':
       return { ...state, mode: 'select', customPath: '', userPrompt: '' };
-    
+
     // Input
     case 'INPUT_CHANGED':
       return { ...state, [action.field]: action.value };
@@ -95,37 +110,88 @@ export function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, scrollOffset: Math.max(0, state.scrollOffset - 1) };
     case 'SCROLL_DOWN':
       return { ...state, scrollOffset: state.scrollOffset + 1 };
-    
+
     // Pipeline lifecycle
     case 'PIPELINE_LOADING_STARTED':
-      return { ...state, mode: 'running', status: 'loading', message: `Loading pipeline: ${action.path}` };
+      return {
+        ...state,
+        mode: 'running',
+        status: 'loading',
+        message: `Loading pipeline: ${action.path}`,
+      };
     case 'PIPELINE_EXECUTION_STARTED':
       return { ...state, mode: 'running', status: 'loading' };
     case 'PIPELINE_COMPLETED':
-      return { ...state, mode: 'summary', status: action.success ? 'success' : 'error', message: action.message, lastResultSuccess: action.success, scrollOffset: 0 };
+      return {
+        ...state,
+        mode: 'summary',
+        status: action.success ? 'success' : 'error',
+        message: action.message,
+        lastResultSuccess: action.success,
+        scrollOffset: 0,
+      };
     case 'PIPELINE_FAILED':
-      return { ...state, mode: 'summary', status: 'error', message: action.error, lastResultSuccess: false };
+      return {
+        ...state,
+        mode: 'summary',
+        status: 'error',
+        message: action.error,
+        lastResultSuccess: false,
+      };
     case 'PIPELINE_NOT_FOUND':
-      return { ...state, mode: 'summary', status: 'error', message: `Pipeline not found: ${action.path}`, lastResultSuccess: false };
-    
+      return {
+        ...state,
+        mode: 'summary',
+        status: 'error',
+        message: `Pipeline not found: ${action.path}`,
+        lastResultSuccess: false,
+      };
+
     // Prompts
     case 'PROMPT_CREATED':
-      return { ...state, mode: 'main-menu', index: 0, customPath: '', notice: { text: `Prompt created: ${action.relativePath} (also at ${action.filePath})`, color: 'green' } };
+      return {
+        ...state,
+        mode: 'main-menu',
+        index: 0,
+        customPath: '',
+        notice: {
+          text: `Prompt created: ${action.relativePath} (also at ${action.filePath})`,
+          color: 'green',
+        },
+      };
     case 'PROMPT_SUBMITTED':
       return { ...state, userPrompt: '' };
     case 'PROMPT_EXECUTION_STARTED':
-      return { ...state, mode: 'running', status: 'loading', message: `Running prompt: ${action.path}` };
+      return {
+        ...state,
+        mode: 'running',
+        status: 'loading',
+        message: `Running prompt: ${action.path}`,
+      };
     case 'PROMPT_EXECUTION_COMPLETED':
-      return { ...state, mode: 'summary', status: action.success ? 'success' : 'error', message: action.message, lastResultSuccess: action.success, scrollOffset: 0 };
+      return {
+        ...state,
+        mode: 'summary',
+        status: action.success ? 'success' : 'error',
+        message: action.message,
+        lastResultSuccess: action.success,
+        scrollOffset: 0,
+      };
     case 'PROMPT_EXECUTION_FAILED':
-      return { ...state, mode: 'summary', status: 'error', message: action.error, lastResultSuccess: false };
-    
+      return {
+        ...state,
+        mode: 'summary',
+        status: 'error',
+        message: action.error,
+        lastResultSuccess: false,
+      };
+
     // System
     case 'CHOICES_CHANGED':
       return { ...state, index: Math.min(state.index, Math.max(0, action.newLength - 1)) };
     case 'NOTICE_DISMISSED':
       return { ...state, notice: null };
-    
+
     default:
       return state;
   }
@@ -165,28 +231,47 @@ export const actions = {
   navigateToSelectPrompt: (): UIAction => ({ type: 'NAVIGATE_TO_SELECT_PROMPT' }),
   navigateToCreatePrompt: (): UIAction => ({ type: 'NAVIGATE_TO_CREATE_PROMPT' }),
   navigateToCustomPath: (): UIAction => ({ type: 'NAVIGATE_TO_CUSTOM_PATH' }),
-  navigateToEnterPrompt: (pipelinePath: string): UIAction => ({ type: 'NAVIGATE_TO_ENTER_PROMPT', pipelinePath }),
+  navigateToEnterPrompt: (pipelinePath: string): UIAction => ({
+    type: 'NAVIGATE_TO_ENTER_PROMPT',
+    pipelinePath,
+  }),
   returnFromScreen: (): UIAction => ({ type: 'RETURN_FROM_SCREEN' }),
-  
+
   // Input
-  inputChanged: (field: 'customPath' | 'userPrompt', value: string): UIAction => ({ type: 'INPUT_CHANGED', field, value }),
+  inputChanged: (field: 'customPath' | 'userPrompt', value: string): UIAction => ({
+    type: 'INPUT_CHANGED',
+    field,
+    value,
+  }),
   scrollUp: (): UIAction => ({ type: 'SCROLL_UP' }),
   scrollDown: (): UIAction => ({ type: 'SCROLL_DOWN' }),
-  
+
   // Pipeline lifecycle
   pipelineLoadingStarted: (path: string): UIAction => ({ type: 'PIPELINE_LOADING_STARTED', path }),
   pipelineExecutionStarted: (): UIAction => ({ type: 'PIPELINE_EXECUTION_STARTED' }),
-  pipelineCompleted: (success: boolean, message: string): UIAction => ({ type: 'PIPELINE_COMPLETED', success, message }),
+  pipelineCompleted: (success: boolean, message: string): UIAction => ({
+    type: 'PIPELINE_COMPLETED',
+    success,
+    message,
+  }),
   pipelineFailed: (error: string): UIAction => ({ type: 'PIPELINE_FAILED', error }),
   pipelineNotFound: (path: string): UIAction => ({ type: 'PIPELINE_NOT_FOUND', path }),
-  
+
   // Prompts
-  promptCreated: (filePath: string, relativePath: string): UIAction => ({ type: 'PROMPT_CREATED', filePath, relativePath }),
+  promptCreated: (filePath: string, relativePath: string): UIAction => ({
+    type: 'PROMPT_CREATED',
+    filePath,
+    relativePath,
+  }),
   promptSubmitted: (): UIAction => ({ type: 'PROMPT_SUBMITTED' }),
   promptExecutionStarted: (path: string): UIAction => ({ type: 'PROMPT_EXECUTION_STARTED', path }),
-  promptExecutionCompleted: (success: boolean, message: string): UIAction => ({ type: 'PROMPT_EXECUTION_COMPLETED', success, message }),
+  promptExecutionCompleted: (success: boolean, message: string): UIAction => ({
+    type: 'PROMPT_EXECUTION_COMPLETED',
+    success,
+    message,
+  }),
   promptExecutionFailed: (error: string): UIAction => ({ type: 'PROMPT_EXECUTION_FAILED', error }),
-  
+
   // System
   choicesChanged: (newLength: number): UIAction => ({ type: 'CHOICES_CHANGED', newLength }),
   noticeDismissed: (): UIAction => ({ type: 'NOTICE_DISMISSED' }),

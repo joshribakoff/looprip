@@ -7,7 +7,7 @@ export type ConversationEntry = AnthropicEntry | OpenAIEntry;
 export async function callModel(
   provider: Provider,
   systemPrompt: string,
-  history: ConversationEntry[]
+  history: ConversationEntry[],
 ): Promise<string> {
   console.log('[agent] calling  model:', provider);
 

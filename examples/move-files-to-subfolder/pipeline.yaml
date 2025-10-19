@@ -5,9 +5,9 @@ nodes:
   - id: plan
     type: agent
     description: Determine which files to move and where
-    prompt: "{{prompt}}"
+    prompt: '{{prompt}}'
     tools: [file_list]
-    output_schema: "{source: string, destination: string}"
+    output_schema: '{source: string, destination: string}'
 
   - id: move
     type: task

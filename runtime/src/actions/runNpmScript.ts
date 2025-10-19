@@ -49,13 +49,16 @@ interface NormalizedPolicy {
   defaultCwd: string;
   defaultTimeoutMs: number;
   defaultAllowUnknownFlags: boolean;
-  scriptOverrides: Record<string, {
-    npmScript?: string;
-    cwd?: string;
-    allowedFlags?: Record<string, FlagConfig>;
-    allowUnknownFlags?: boolean;
-    timeoutMs?: number;
-  }>;
+  scriptOverrides: Record<
+    string,
+    {
+      npmScript?: string;
+      cwd?: string;
+      allowedFlags?: Record<string, FlagConfig>;
+      allowUnknownFlags?: boolean;
+      timeoutMs?: number;
+    }
+  >;
 }
 
 const DEFAULT_TIMEOUT_MS = 3 * 60 * 1000;
@@ -97,7 +100,9 @@ function getPackageScripts(): string[] {
   }
 
   try {
-    const pkg = JSON.parse(readFileSync(packagePath, 'utf8')) as { scripts?: Record<string, unknown> };
+    const pkg = JSON.parse(readFileSync(packagePath, 'utf8')) as {
+      scripts?: Record<string, unknown>;
+    };
     cachedPackageScripts = pkg.scripts ? Object.keys(pkg.scripts) : [];
   } catch {
     cachedPackageScripts = [];
@@ -121,26 +126,42 @@ const defaultPolicyOptions: RunNpmScriptPolicy = {
         watch: { type: 'boolean', flag: '--watch', description: 'Run Vitest in watch mode.' },
         ui: { type: 'boolean', flag: '--ui', description: 'Launch the Vitest UI.' },
         run: { type: 'boolean', flag: '--run', description: 'Force a single-run execution.' },
-        filter: { type: 'string', flag: '--filter', description: 'Run tests matching a filter pattern.' },
-        testNamePattern: { type: 'string', flag: '--testNamePattern', description: 'Only run tests with matching names.' },
+        filter: {
+          type: 'string',
+          flag: '--filter',
+          description: 'Run tests matching a filter pattern.',
+        },
+        testNamePattern: {
+          type: 'string',
+          flag: '--testNamePattern',
+          description: 'Only run tests with matching names.',
+        },
         file: { type: 'string', description: 'Path to a specific test file or glob.' },
       },
     },
     'runtime:lint': {
       allowUnknownFlags: false,
       allowedFlags: {
-        fix: { type: 'boolean', flag: '--fix', description: 'Attempt to automatically fix lint issues.' },
+        fix: {
+          type: 'boolean',
+          flag: '--fix',
+          description: 'Attempt to automatically fix lint issues.',
+        },
       },
     },
   },
 };
 
-function cloneAllowedFlags(source: Record<string, FlagConfig> | null | undefined): Record<string, FlagConfig> | undefined {
+function cloneAllowedFlags(
+  source: Record<string, FlagConfig> | null | undefined,
+): Record<string, FlagConfig> | undefined {
   if (!source) {
     return undefined;
   }
 
-  return Object.fromEntries(Object.entries(source).map(([key, value]) => [key, { ...value }])) as Record<string, FlagConfig>;
+  return Object.fromEntries(
+    Object.entries(source).map(([key, value]) => [key, { ...value }]),
+  ) as Record<string, FlagConfig>;
 }
 
 function mergeScriptOverrides(
@@ -201,13 +222,17 @@ function mergeScriptOverrides(
   return Object.keys(result).length > 0 ? result : undefined;
 }
 
-function mergePolicyOptions(base: RunNpmScriptPolicy, update: RunNpmScriptPolicy = {}): RunNpmScriptPolicy {
+function mergePolicyOptions(
+  base: RunNpmScriptPolicy,
+  update: RunNpmScriptPolicy = {},
+): RunNpmScriptPolicy {
   return {
     allowedScripts: update.allowedScripts ?? base.allowedScripts ?? undefined,
     blockedScripts: update.blockedScripts ?? base.blockedScripts ?? undefined,
     defaultCwd: update.defaultCwd ?? base.defaultCwd ?? undefined,
     defaultTimeoutMs: update.defaultTimeoutMs ?? base.defaultTimeoutMs ?? undefined,
-    defaultAllowUnknownFlags: update.defaultAllowUnknownFlags ?? base.defaultAllowUnknownFlags ?? undefined,
+    defaultAllowUnknownFlags:
+      update.defaultAllowUnknownFlags ?? base.defaultAllowUnknownFlags ?? undefined,
     scriptOverrides: mergeScriptOverrides(base.scriptOverrides, update.scriptOverrides),
   };
 }
@@ -259,7 +284,9 @@ export function resetRunNpmScriptPolicy(): void {
 
 export function getRunNpmScriptPolicy(): NormalizedPolicy {
   return {
-    allowedScripts: currentPolicy.allowedScripts ? new Set(currentPolicy.allowedScripts) : undefined,
+    allowedScripts: currentPolicy.allowedScripts
+      ? new Set(currentPolicy.allowedScripts)
+      : undefined,
     blockedScripts: new Set(currentPolicy.blockedScripts),
     defaultCwd: currentPolicy.defaultCwd,
     defaultTimeoutMs: currentPolicy.defaultTimeoutMs,
@@ -269,7 +296,9 @@ export function getRunNpmScriptPolicy(): NormalizedPolicy {
         script,
         {
           ...override,
-          allowedFlags: override.allowedFlags ? cloneAllowedFlags(override.allowedFlags) : undefined,
+          allowedFlags: override.allowedFlags
+            ? cloneAllowedFlags(override.allowedFlags)
+            : undefined,
         },
       ]),
     ),
@@ -341,7 +370,9 @@ function resolveScriptConfig(script: string): ScriptConfig {
   const override = currentPolicy.scriptOverrides[script];
   const npmScript = override?.npmScript ?? script;
   const cwd = override?.cwd ?? currentPolicy.defaultCwd;
-  const allowedFlags = override?.allowedFlags ? cloneAllowedFlags(override.allowedFlags) : undefined;
+  const allowedFlags = override?.allowedFlags
+    ? cloneAllowedFlags(override.allowedFlags)
+    : undefined;
   const allowUnknownFlags = override?.allowUnknownFlags ?? currentPolicy.defaultAllowUnknownFlags;
   const timeoutMs = override?.timeoutMs ?? currentPolicy.defaultTimeoutMs;
 

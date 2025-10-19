@@ -5,9 +5,14 @@ import { readFileArgsSchema, type ReadFileArgs } from './readFile.js';
 import { runNpmScriptArgsSchema, type RunNpmScriptArgs } from './runNpmScript.js';
 import { writeFileArgsSchema, type WriteFileArgs } from './writeFile.js';
 
-export const agentActionNames = ['read_file', 'write_file', 'list_directory', 'run_npm_script'] as const;
+export const agentActionNames = [
+  'read_file',
+  'write_file',
+  'list_directory',
+  'run_npm_script',
+] as const;
 
-export type AgentActionName = typeof agentActionNames[number];
+export type AgentActionName = (typeof agentActionNames)[number];
 
 export const agentActionSchema = z.discriminatedUnion('action', [
   z.object({

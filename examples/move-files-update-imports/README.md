@@ -11,7 +11,7 @@ Agent (plan) → Task (mv) → Agent (update imports)
 ```
 
 1. **Planning agent**: Determines which files to move, reads their contents to understand dependencies
-2. **Move task**: Executes the file moves using `mv` 
+2. **Move task**: Executes the file moves using `mv`
 3. **Import update agent**: Uses TS Morph to fix all import statements across the codebase
 
 ## Key Concepts Demonstrated
@@ -19,6 +19,7 @@ Agent (plan) → Task (mv) → Agent (update imports)
 ### Multi-Agent Orchestration
 
 Different agents for different purposes:
+
 - **Planning agent**: Limited to read-only tools (`file_list`, `file_read`)
 - **Import agent**: Has access to `ts_morph` for AST manipulation
 
@@ -45,11 +46,13 @@ p run pipeline.yaml --prompt "Move all components to src/components/ui"
 ## What This Prevents
 
 Without this pipeline structure:
+
 - A single agent might try to manually edit import strings (error-prone)
 - Agent might forget to update imports in some files
 - Agent might try to use regex instead of proper AST tools
 
 With this pattern:
+
 - File moves use native `mv` (fast, reliable)
 - Import updates use TS Morph (safe, comprehensive)
 - Each step has only the tools it needs
