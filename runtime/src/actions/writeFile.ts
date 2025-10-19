@@ -9,9 +9,12 @@ export const writeFileArgsSchema = z
     contents: z.string().optional(),
     content: z.string().optional(),
   })
-  .refine((value) => Boolean((value.path ?? value.file_path) && (value.contents ?? value.content)), {
-    message: 'write_file requires "path" and "contents"',
-  })
+  .refine(
+    (value) => Boolean((value.path ?? value.file_path) && (value.contents ?? value.content)),
+    {
+      message: 'write_file requires "path" and "contents"',
+    },
+  )
   .transform((value) => ({
     path: value.path ?? value.file_path!,
     contents: value.contents ?? value.content!,

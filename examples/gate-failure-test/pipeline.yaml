@@ -6,13 +6,13 @@ nodes:
     type: task
     description: Create a file with invalid syntax
     command: echo "function test() { return 42" > bad.js
-    
+
   - id: check-syntax
     type: gate
     description: Verify JavaScript syntax (should fail)
     command: node -c bad.js
-    message: "JavaScript syntax check failed - pipeline stopped"
-    
+    message: 'JavaScript syntax check failed - pipeline stopped'
+
   - id: should-not-run
     type: task
     description: This should not execute

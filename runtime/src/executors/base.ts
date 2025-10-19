@@ -5,9 +5,5 @@
 import { Node, NodeOutput, PipelineState, ExecutionContext } from '../types/index.js';
 
 export interface NodeExecutor {
-  execute(
-    node: Node,
-    state: PipelineState,
-    context: ExecutionContext
-  ): Promise<NodeOutput>;
+  execute(node: Node, state: PipelineState, context: ExecutionContext): Promise<NodeOutput>;
 }

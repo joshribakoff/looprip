@@ -1,4 +1,4 @@
-const ESC = "\u001B[";
+const ESC = '\u001B[';
 
 export type Styler = (value: string) => string;
 
@@ -62,5 +62,5 @@ export function applyStyles(value: string, ...styles: Styler[]): string {
 const ANSI_PATTERN = /\u001B\[[0-9;]*m/g;
 
 export function stripStyles(value: string): string {
-  return value.replace(ANSI_PATTERN, "");
+  return value.replace(ANSI_PATTERN, '');
 }

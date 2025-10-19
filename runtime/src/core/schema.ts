@@ -1,6 +1,6 @@
 /**
  * Schema parser and validator
- * 
+ *
  * Supports JSON Schema format for defining agent output schemas.
  * Uses Zod internally for robust runtime validation.
  */
@@ -17,12 +17,12 @@ export class SchemaParser {
     if (typeof schema === 'object' && schema !== null) {
       return this.parseJsonSchema(schema);
     }
-    
+
     // Legacy string format support (for backward compatibility)
     if (typeof schema === 'string') {
       return this.parseLegacyString(schema);
     }
-    
+
     throw new Error(`Invalid schema: ${JSON.stringify(schema)}`);
   }
 
@@ -31,7 +31,7 @@ export class SchemaParser {
    */
   private parseJsonSchema(jsonSchema: any): ParsedSchema {
     const zodSchema = this.jsonSchemaToZod(jsonSchema);
-    
+
     return {
       type: jsonSchema.type || 'object',
       validate: (value: any) => {
@@ -41,11 +41,13 @@ export class SchemaParser {
         } catch (error: any) {
           return {
             valid: false,
-            errors: error.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`) || [error.message]
+            errors: error.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`) || [
+              error.message,
+            ],
           };
         }
       },
-      toJsonSchema: () => jsonSchema
+      toJsonSchema: () => jsonSchema,
     };
   }
 
@@ -60,39 +62,39 @@ export class SchemaParser {
     switch (schema.type) {
       case 'string':
         return z.string();
-      
+
       case 'number':
         return z.number();
-      
+
       case 'boolean':
         return z.boolean();
-      
+
       case 'array':
         if (!schema.items) {
           return z.array(z.any());
         }
         return z.array(this.jsonSchemaToZod(schema.items));
-      
+
       case 'object': {
         if (!schema.properties) {
           return z.object({});
         }
-        
+
         const shape: Record<string, z.ZodType> = {};
         for (const [key, propSchema] of Object.entries(schema.properties)) {
           let zodType = this.jsonSchemaToZod(propSchema as any);
-          
+
           // Make optional if not in required array
           if (!schema.required || !schema.required.includes(key)) {
             zodType = zodType.optional();
           }
-          
+
           shape[key] = zodType;
         }
-        
+
         return z.object(shape);
       }
-      
+
       default:
         throw new Error(`Unsupported schema type: ${schema.type}`);
     }
@@ -103,7 +105,7 @@ export class SchemaParser {
    */
   private parseLegacyString(schemaStr: string): ParsedSchema {
     const trimmed = schemaStr.trim();
-    
+
     // Handle primitive types
     if (trimmed === 'string') {
       return this.createPrimitiveSchema('string');
@@ -114,19 +116,19 @@ export class SchemaParser {
     if (trimmed === 'boolean') {
       return this.createPrimitiveSchema('boolean');
     }
-    
+
     // Handle array types
     const arrayMatch = trimmed.match(/^array<(.+)>$/);
     if (arrayMatch) {
       const innerType = arrayMatch[1].trim();
       return this.createArraySchema(innerType);
     }
-    
+
     // Handle object types
     if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
       return this.createObjectSchema(trimmed);
     }
-    
+
     throw new Error(`Invalid schema: ${schemaStr}`);
   }
 
@@ -137,26 +139,26 @@ export class SchemaParser {
         const valid = typeof value === type;
         return {
           valid,
-          errors: valid ? undefined : [`Expected ${type}, got ${typeof value}`]
+          errors: valid ? undefined : [`Expected ${type}, got ${typeof value}`],
         };
       },
-      toJsonSchema: () => ({ type })
+      toJsonSchema: () => ({ type }),
     };
   }
 
   private createArraySchema(innerTypeStr: string): ParsedSchema {
     const innerSchema = this.parse(innerTypeStr);
-    
+
     return {
       type: 'array',
       validate: (value: any) => {
         if (!Array.isArray(value)) {
           return {
             valid: false,
-            errors: [`Expected array, got ${typeof value}`]
+            errors: [`Expected array, got ${typeof value}`],
           };
         }
-        
+
         const errors: string[] = [];
         for (let i = 0; i < value.length; i++) {
           const result = innerSchema.validate(value[i]);
@@ -164,16 +166,16 @@ export class SchemaParser {
             errors.push(`Item ${i}: ${result.errors?.join(', ')}`);
           }
         }
-        
+
         return {
           valid: errors.length === 0,
-          errors: errors.length > 0 ? errors : undefined
+          errors: errors.length > 0 ? errors : undefined,
         };
       },
       toJsonSchema: () => ({
         type: 'array',
-        items: innerSchema.toJsonSchema()
-      })
+        items: innerSchema.toJsonSchema(),
+      }),
     };
   }
 
@@ -182,37 +184,37 @@ export class SchemaParser {
     const content = schemaStr.slice(1, -1).trim();
     const properties: Record<string, ParsedSchema> = {};
     const required: string[] = [];
-    
+
     if (content) {
       // Simple parser for comma-separated key: type pairs
       const pairs = this.splitObjectProperties(content);
-      
+
       for (const pair of pairs) {
         const colonIndex = pair.indexOf(':');
         if (colonIndex === -1) {
           throw new Error(`Invalid object property: ${pair}`);
         }
-        
+
         const key = pair.slice(0, colonIndex).trim();
         const typeStr = pair.slice(colonIndex + 1).trim();
-        
+
         properties[key] = this.parse(typeStr);
         required.push(key);
       }
     }
-    
+
     return {
       type: 'object',
       validate: (value: any) => {
         if (!value || typeof value !== 'object' || Array.isArray(value)) {
           return {
             valid: false,
-            errors: [`Expected object, got ${typeof value}`]
+            errors: [`Expected object, got ${typeof value}`],
           };
         }
-        
+
         const errors: string[] = [];
-        
+
         // Check required properties
         for (const key of required) {
           if (!(key in value)) {
@@ -224,20 +226,23 @@ export class SchemaParser {
             }
           }
         }
-        
+
         return {
           valid: errors.length === 0,
-          errors: errors.length > 0 ? errors : undefined
+          errors: errors.length > 0 ? errors : undefined,
         };
       },
       toJsonSchema: () => ({
         type: 'object',
-        properties: Object.entries(properties).reduce((acc, [key, schema]) => {
-          acc[key] = schema.toJsonSchema();
-          return acc;
-        }, {} as Record<string, any>),
-        required
-      })
+        properties: Object.entries(properties).reduce(
+          (acc, [key, schema]) => {
+            acc[key] = schema.toJsonSchema();
+            return acc;
+          },
+          {} as Record<string, any>,
+        ),
+        required,
+      }),
     };
   }
 
@@ -245,10 +250,10 @@ export class SchemaParser {
     const pairs: string[] = [];
     let current = '';
     let depth = 0;
-    
+
     for (let i = 0; i < content.length; i++) {
       const char = content[i];
-      
+
       if (char === '{' || char === '<') {
         depth++;
       } else if (char === '}' || char === '>') {
@@ -258,14 +263,14 @@ export class SchemaParser {
         current = '';
         continue;
       }
-      
+
       current += char;
     }
-    
+
     if (current.trim()) {
       pairs.push(current.trim());
     }
-    
+
     return pairs;
   }
 }

@@ -14,7 +14,9 @@ export const readFileArgsSchema = z
 
 export type ReadFileArgs = z.infer<typeof readFileArgsSchema>;
 
-export async function readFileAction(targetPath: string): Promise<{ contents: string; resolvedPath: string }> {
+export async function readFileAction(
+  targetPath: string,
+): Promise<{ contents: string; resolvedPath: string }> {
   const resolvedPath = path.resolve(process.cwd(), targetPath);
   try {
     const contents = await fs.readFile(resolvedPath, 'utf8');

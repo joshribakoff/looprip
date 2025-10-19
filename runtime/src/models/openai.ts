@@ -10,7 +10,7 @@ export type ConversationEntry = {
 
 export async function callOpenAIModel(
   systemPrompt: string,
-  history: ConversationEntry[]
+  history: ConversationEntry[],
 ): Promise<string> {
   if (!config.openaiApiKey) {
     throw new Error('OPENAI_API_KEY is required for the OpenAI provider.');

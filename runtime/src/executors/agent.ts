@@ -18,7 +18,7 @@ export class AgentExecutor implements NodeExecutor {
 
   constructor(apiKey?: string, logger?: Logger) {
     this.anthropic = new Anthropic({
-      apiKey: apiKey || process.env.ANTHROPIC_API_KEY
+      apiKey: apiKey || process.env.ANTHROPIC_API_KEY,
     });
     this.logger = logger || new Logger();
   }
@@ -26,37 +26,31 @@ export class AgentExecutor implements NodeExecutor {
   async execute(
     node: AgentNode,
     state: PipelineState,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<NodeOutput> {
     const startTime = Date.now();
-    
+
     try {
       // Get the tools for this agent
       const tools = getTools(node.tools);
-      
+
       // Parse and validate the output schema
       const outputSchema = this.schemaParser.parse(node.output_schema);
-      
+
       // Interpolate the prompt
       const prompt = this.templateEngine.interpolate(node.prompt, state);
-      
+
       this.logger.agentPrompt(prompt);
-      this.logger.agentTools(tools.map(t => t.name));
-      
+      this.logger.agentTools(tools.map((t) => t.name));
+
       // Build the system prompt
       const systemPrompt = this.buildSystemPrompt(node, outputSchema, context);
-      
+
       // Run the agent
-      const result = await this.runAgent(
-        prompt,
-        systemPrompt,
-        tools,
-        outputSchema,
-        context
-      );
-      
+      const result = await this.runAgent(prompt, systemPrompt, tools, outputSchema, context);
+
       const endTime = Date.now();
-      
+
       return {
         nodeId: node.id,
         type: 'agent',
@@ -64,11 +58,11 @@ export class AgentExecutor implements NodeExecutor {
         output: result,
         startTime,
         endTime,
-        duration: endTime - startTime
+        duration: endTime - startTime,
       };
     } catch (error: any) {
       const endTime = Date.now();
-      
+
       return {
         nodeId: node.id,
         type: 'agent',
@@ -76,7 +70,7 @@ export class AgentExecutor implements NodeExecutor {
         error: error.message,
         startTime,
         endTime,
-        duration: endTime - startTime
+        duration: endTime - startTime,
       };
     }
   }
@@ -84,11 +78,11 @@ export class AgentExecutor implements NodeExecutor {
   private buildSystemPrompt(
     node: AgentNode,
     outputSchema: any,
-    context: ExecutionContext
+    _context: ExecutionContext,
   ): string {
-    let prompt = `You are an AI agent executing a task as part of an automated pipeline.
+    const systemPromptText = `You are an AI agent executing a task as part of an automated pipeline.
 
-Your role: ${node.description || 'Execute the user\'s request'}
+Your role: ${node.description || "Execute the user's request"}
 
 You have access to the following tools:
 ${node.tools.join(', ')}
@@ -98,7 +92,7 @@ ${JSON.stringify(outputSchema.toJsonSchema(), null, 2)}
 
 Return ONLY valid JSON matching this schema. Do not include any explanatory text outside the JSON.`;
 
-    return prompt;
+    return systemPromptText;
   }
 
   private async runAgent(
@@ -107,16 +101,16 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
     tools: any[],
     outputSchema: any,
     context: ExecutionContext,
-    maxIterations: number = 10
+    maxIterations: number = 10,
   ): Promise<any> {
     const messages: Anthropic.MessageParam[] = [
-      { role: 'user', content: [{ type: 'text', text: userPrompt }] }
+      { role: 'user', content: [{ type: 'text', text: userPrompt }] },
     ];
-    
-    const anthropicTools: Anthropic.Tool[] = tools.map(tool => ({
+
+    const anthropicTools: Anthropic.Tool[] = tools.map((tool) => ({
       name: tool.name,
       description: tool.description,
-      input_schema: tool.inputSchema
+      input_schema: tool.inputSchema,
     }));
 
     const maxJsonRetries = 3;
@@ -128,7 +122,7 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
         max_tokens: 4096,
         system: systemPrompt,
         messages,
-        tools: anthropicTools
+        tools: anthropicTools,
       });
 
       this.logger.agentIteration(i + 1, maxIterations);
@@ -138,93 +132,99 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
         messages.push({ role: 'assistant', content: response.content });
 
         // Agent finished - extract the final answer
-        const textContent = response.content.find(c => c.type === 'text');
+        const textContent = response.content.find((c) => c.type === 'text');
         if (textContent && textContent.type === 'text') {
           try {
             const result = this.extractJson(textContent.text);
-            
+
             // Validate against schema
             const validation = outputSchema.validate(result);
             if (!validation.valid) {
-              throw new Error(`Agent output doesn't match schema: ${validation.errors?.join(', ')}`);
+              throw new Error(
+                `Agent output doesn't match schema: ${validation.errors?.join(', ')}`,
+              );
             }
-            
+
             return result;
           } catch (error: any) {
             jsonRetryCount += 1;
             this.logger.agentJsonRetry(error.message, jsonRetryCount, maxJsonRetries);
-            
+
             if (jsonRetryCount >= maxJsonRetries) {
-              throw new Error(`Agent failed to produce valid JSON after ${jsonRetryCount} attempt${jsonRetryCount === 1 ? '' : 's'}: ${error.message}`);
+              throw new Error(
+                `Agent failed to produce valid JSON after ${jsonRetryCount} attempt${jsonRetryCount === 1 ? '' : 's'}: ${error.message}`,
+              );
             }
 
             messages.push({
               role: 'user',
-              content: [{
-                type: 'text',
-                text: `The previous response could not be parsed as valid JSON (${error.message}). Please reply again with ONLY valid JSON that matches the provided schema.`
-              }]
+              content: [
+                {
+                  type: 'text',
+                  text: `The previous response could not be parsed as valid JSON (${error.message}). Please reply again with ONLY valid JSON that matches the provided schema.`,
+                },
+              ],
             });
-            
+
             continue;
           }
         }
         throw new Error('Agent finished without providing output');
       }
-      
+
       if (response.stop_reason === 'tool_use') {
         // Agent wants to use tools
         messages.push({ role: 'assistant', content: response.content });
-        
+
         const toolResults: Anthropic.MessageParam = {
           role: 'user',
-          content: []
+          content: [],
         };
-        
+
         for (const block of response.content) {
           if (block.type === 'tool_use') {
             this.logger.agentToolCall(block.name, block.input);
-            
-            const tool = tools.find(t => t.name === block.name);
+
+            const tool = tools.find((t) => t.name === block.name);
             if (!tool) {
               throw new Error(`Unknown tool: ${block.name}`);
             }
-            
+
             try {
               const result = await tool.handler(block.input, context);
-              
+
               this.logger.agentToolResult(result);
-              
+
               (toolResults.content as Anthropic.ToolResultBlockParam[]).push({
                 type: 'tool_result',
                 tool_use_id: block.id,
-                content: JSON.stringify(result)
+                content: JSON.stringify(result),
               });
             } catch (error: any) {
               (toolResults.content as Anthropic.ToolResultBlockParam[]).push({
                 type: 'tool_result',
                 tool_use_id: block.id,
                 content: JSON.stringify({ error: error.message }),
-                is_error: true
+                is_error: true,
               });
             }
           }
         }
-        
+
         messages.push(toolResults);
         continue;
       }
-      
+
       throw new Error(`Unexpected stop reason: ${response.stop_reason}`);
     }
-    
+
     throw new Error(`Agent exceeded maximum iterations (${maxIterations})`);
   }
 
   private extractJson(text: string): any {
     // Try to find JSON in the text
     const trimmed = text.trim();
-    
+
     // If it looks like JSON, parse it directly
     if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
       try {
@@ -233,19 +233,19 @@ Return ONLY valid JSON matching this schema. Do not include any explanatory text
         // Fall through to extraction
       }
     }
-    
+
     // Try to extract JSON from markdown code blocks
     const codeBlockMatch = trimmed.match(/```(?:json)?\s*\n([\s\S]*?)\n```/);
     if (codeBlockMatch) {
       return JSON.parse(codeBlockMatch[1]);
     }
-    
+
     // Try to find any JSON-like structure
     const jsonMatch = trimmed.match(/(\{[\s\S]*\}|\[[\s\S]*\])/);
     if (jsonMatch) {
       return JSON.parse(jsonMatch[1]);
     }
-    
+
     throw new Error('Could not extract JSON from agent response');
   }
 }

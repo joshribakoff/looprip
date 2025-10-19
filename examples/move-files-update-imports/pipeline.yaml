@@ -5,9 +5,9 @@ nodes:
   - id: plan
     type: agent
     description: Analyze files and plan moves
-    prompt: "{{prompt}}"
+    prompt: '{{prompt}}'
     tools: [file_list, file_read]
-    output_schema: "{files_to_move: array<{source: string, destination: string}>}"
+    output_schema: '{files_to_move: array<{source: string, destination: string}>}'
 
   - id: move
     type: task
@@ -17,6 +17,6 @@ nodes:
   - id: update-imports
     type: agent
     description: Update import statements in affected files
-    prompt: "Update all TypeScript import statements to reflect the moved files: {{plan.files_to_move}}"
+    prompt: 'Update all TypeScript import statements to reflect the moved files: {{plan.files_to_move}}'
     tools: [file_read, file_write]
-    output_schema: "{files_updated: array<string>}"
+    output_schema: '{files_updated: array<string>}'

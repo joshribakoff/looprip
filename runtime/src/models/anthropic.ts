@@ -9,7 +9,7 @@ export type ConversationEntry = {
 
 export async function callAnthropicModel(
   systemPrompt: string,
-  history: ConversationEntry[]
+  history: ConversationEntry[],
 ): Promise<string> {
   if (!config.anthropicApiKey) {
     throw new Error('ANTHROPIC_API_KEY is required for the Anthropic provider.');

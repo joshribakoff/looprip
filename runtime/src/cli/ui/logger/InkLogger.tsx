@@ -1,8 +1,20 @@
-import React, {createContext, useCallback, useContext, useMemo, useRef, useState} from 'react';
-import {Box, Text, Static} from 'ink';
+import React, { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react';
+import { Box, Text, Static } from 'ink';
 import { Logger as ConsoleLogger } from '../../../utils/logger.js';
 
-export type LogLevel = 'info' | 'warn' | 'error' | 'section' | 'pipeline' | 'node' | 'task' | 'gate' | 'agent' | 'validation' | 'stdout' | 'stderr';
+export type LogLevel =
+  | 'info'
+  | 'warn'
+  | 'error'
+  | 'section'
+  | 'pipeline'
+  | 'node'
+  | 'task'
+  | 'gate'
+  | 'agent'
+  | 'validation'
+  | 'stdout'
+  | 'stderr';
 
 export type LogEntry = {
   id: number;
@@ -29,55 +41,118 @@ class InkLogger extends ConsoleLogger {
   }
 
   // Pipeline-level
-  section(title: string) { this.add('section', title); }
+  section(title: string) {
+    this.add('section', title);
+  }
   pipelineStart(name: string, description?: string) {
     this.add('pipeline', `Starting Pipeline: ${name}${description ? `\n${description}` : ''}`);
   }
   pipelineSuccess(nodeCount: number, totalTime: number, filesChanged: number) {
-    this.add('pipeline', `✓ Pipeline Completed • nodes: ${nodeCount}, time: ${totalTime}ms, files: ${filesChanged}`);
+    this.add(
+      'pipeline',
+      `✓ Pipeline Completed • nodes: ${nodeCount}, time: ${totalTime}ms, files: ${filesChanged}`,
+    );
   }
-  pipelineFailed() { this.add('pipeline', '✗ Pipeline Failed'); }
+  pipelineFailed() {
+    this.add('pipeline', '✗ Pipeline Failed');
+  }
 
   // Node-level
   nodeStart(id: string, type: string, description?: string) {
     this.add('node', `▶ ${id} (${type})${description ? `\n${description}` : ''}`);
   }
-  nodeSuccess(_id: string, duration: number) { this.add('node', `✓ Completed in ${duration}ms`); }
-  nodeFailed(_id: string, error: string, duration: number) { this.add('node', `✗ Failed after ${duration}ms\nError: ${error}`); }
+  nodeSuccess(_id: string, duration: number) {
+    this.add('node', `✓ Completed in ${duration}ms`);
+  }
+  nodeFailed(_id: string, error: string, duration: number) {
+    this.add('node', `✗ Failed after ${duration}ms\nError: ${error}`);
+  }
 
   // Task-specific
-  taskCommand(command: string) { if ((this as any).verbose) this.add('task', `Executing: ${command}`); }
-  taskFilesChanged(files: string[]) { if ((this as any).verbose && files.length) this.add('task', `Changed ${files.length} file(s)`); }
+  taskCommand(command: string) {
+    if ((this as any).verbose) this.add('task', `Executing: ${command}`);
+  }
+  taskFilesChanged(files: string[]) {
+    if ((this as any).verbose && files.length) this.add('task', `Changed ${files.length} file(s)`);
+  }
 
   // Gate
-  gateCheck(command: string) { if ((this as any).verbose) this.add('gate', `Gate check: ${command}`); }
+  gateCheck(command: string) {
+    if ((this as any).verbose) this.add('gate', `Gate check: ${command}`);
+  }
 
   // Agent
-  agentPrompt(prompt: string) { if ((this as any).verbose) this.add('agent', `Prompt: ${prompt.slice(0, 100)}${prompt.length > 100 ? '…' : ''}`); }
-  agentTools(tools: string[]) { if ((this as any).verbose) this.add('agent', `Tools: ${tools.join(', ')}`); }
-  agentIteration(current: number, max: number) { if ((this as any).verbose) this.add('agent', `Iteration ${current}/${max}`); }
-  agentToolCall(toolName: string) { if ((this as any).verbose) this.add('agent', `🔧 Tool: ${toolName}`); }
-  agentToolResult(result: any) { if ((this as any).verbose) this.add('agent', `Result: ${JSON.stringify(result).slice(0, 100)}${JSON.stringify(result).length > 100 ? '…' : ''}`); }
+  agentPrompt(prompt: string) {
+    if ((this as any).verbose)
+      this.add('agent', `Prompt: ${prompt.slice(0, 100)}${prompt.length > 100 ? '…' : ''}`);
+  }
+  agentTools(tools: string[]) {
+    if ((this as any).verbose) this.add('agent', `Tools: ${tools.join(', ')}`);
+  }
+  agentIteration(current: number, max: number) {
+    if ((this as any).verbose) this.add('agent', `Iteration ${current}/${max}`);
+  }
+  agentToolCall(toolName: string) {
+    if ((this as any).verbose) this.add('agent', `🔧 Tool: ${toolName}`);
+  }
+  agentToolResult(result: any) {
+    if ((this as any).verbose)
+      this.add(
+        'agent',
+        `Result: ${JSON.stringify(result).slice(0, 100)}${JSON.stringify(result).length > 100 ? '…' : ''}`,
+      );
+  }
 
   // Validation
-  validationStart(path: string) { this.add('validation', `Validating pipeline: ${path}`); }
-  validationSuccess() { this.add('validation', '✓ Pipeline is valid'); }
-  validationInfo(label: string, value: string) { this.add('validation', `${label}: ${value}`); }
-  validationNode(id: string, type: string, details: string[] = []) { this.add('validation', `Node: ${id} (${type})${details.length ? `\n${details.map(d=>`• ${d}`).join('\n')}` : ''}`); }
+  validationStart(path: string) {
+    this.add('validation', `Validating pipeline: ${path}`);
+  }
+  validationSuccess() {
+    this.add('validation', '✓ Pipeline is valid');
+  }
+  validationInfo(label: string, value: string) {
+    this.add('validation', `${label}: ${value}`);
+  }
+  validationNode(id: string, type: string, details: string[] = []) {
+    this.add(
+      'validation',
+      `Node: ${id} (${type})${details.length ? `\n${details.map((d) => `• ${d}`).join('\n')}` : ''}`,
+    );
+  }
 
   // Generic
-  loading(message: string) { this.add('info', message); }
-  info(message: string) { this.add('info', message); }
-  warning(message: string) { this.add('warn', message); }
-  error(message: string, details?: string) { this.add('error', details ? `${message}\n${details}` : message); }
-  dryRun() { this.add('warn', '⚠ Dry run mode - pipeline will not be executed'); }
+  loading(message: string) {
+    this.add('info', message);
+  }
+  info(message: string) {
+    this.add('info', message);
+  }
+  warning(message: string) {
+    this.add('warn', message);
+  }
+  error(message: string, details?: string) {
+    this.add('error', details ? `${message}\n${details}` : message);
+  }
+  dryRun() {
+    this.add('warn', '⚠ Dry run mode - pipeline will not be executed');
+  }
 
   // Streams used by TaskExecutor
-  writeStdout(text: string) { this.add('stdout', text.replace(/\n$/, '')); }
-  writeStderr(text: string) { this.add('stderr', text.replace(/\n$/, '')); }
+  writeStdout(text: string) {
+    this.add('stdout', text.replace(/\n$/, ''));
+  }
+  writeStderr(text: string) {
+    this.add('stderr', text.replace(/\n$/, ''));
+  }
 }
 
-export function LoggerProvider({ children, verbose = false }: { children: React.ReactNode; verbose?: boolean }) {
+export function LoggerProvider({
+  children,
+  verbose = false,
+}: {
+  children: React.ReactNode;
+  verbose?: boolean;
+}) {
   const idRef = useRef(0);
   const [entries, setEntries] = useState<LogEntry[]>([]);
 
@@ -89,7 +164,10 @@ export function LoggerProvider({ children, verbose = false }: { children: React.
 
   const logger = useMemo(() => new InkLogger(!!verbose, add), [add, verbose]);
 
-  const value = useMemo<LoggerContextValue>(() => ({ entries, add, clear, logger }), [entries, add, clear, logger]);
+  const value = useMemo<LoggerContextValue>(
+    () => ({ entries, add, clear, logger }),
+    [entries, add, clear, logger],
+  );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

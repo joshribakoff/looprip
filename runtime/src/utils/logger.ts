@@ -90,7 +90,11 @@ export class Logger {
   // Agent-specific messages
   agentPrompt(prompt: string) {
     if (this.verbose) {
-      console.log(blue('│  ') + dim('Prompt: ') + white(prompt.slice(0, 100) + (prompt.length > 100 ? '...' : '')));
+      console.log(
+        blue('│  ') +
+          dim('Prompt: ') +
+          white(prompt.slice(0, 100) + (prompt.length > 100 ? '...' : '')),
+      );
     }
   }
 
@@ -113,11 +117,16 @@ export class Logger {
 
     let detail = '';
     if (input && typeof input === 'object') {
-      const path = typeof input.path === 'string' ? input.path : typeof input.file_path === 'string' ? input.file_path : undefined;
+      const path =
+        typeof input.path === 'string'
+          ? input.path
+          : typeof input.file_path === 'string'
+            ? input.file_path
+            : undefined;
       if (path) {
         detail = gray(` (${path})`);
       } else {
-        const keys = Object.keys(input).filter(key => key !== 'content');
+        const keys = Object.keys(input).filter((key) => key !== 'content');
         if (keys.length > 0) {
           detail = gray(` (${keys.join(', ')})`);
         }
@@ -134,11 +143,17 @@ export class Logger {
 
     if (result && typeof result === 'object' && !Array.isArray(result)) {
       if (typeof result.content === 'string') {
-        console.log(blue('│  ') + dim('   Result: ') + gray(`content length ${result.content.length}`));
+        console.log(
+          blue('│  ') + dim('   Result: ') + gray(`content length ${result.content.length}`),
+        );
         return;
       }
 
-      if ('success' in result && typeof result.success === 'boolean' && Object.keys(result).length === 1) {
+      if (
+        'success' in result &&
+        typeof result.success === 'boolean' &&
+        Object.keys(result).length === 1
+      ) {
         console.log(blue('│  ') + dim('   Result: ') + gray(result.success ? 'success' : 'failed'));
         return;
       }
@@ -147,7 +162,9 @@ export class Logger {
     const serialized = JSON.stringify(result);
     if (typeof serialized === 'string') {
       const preview = serialized.slice(0, 100);
-      console.log(blue('│  ') + dim('   Result: ') + gray(preview + (serialized.length > 100 ? '...' : '')));
+      console.log(
+        blue('│  ') + dim('   Result: ') + gray(preview + (serialized.length > 100 ? '...' : '')),
+      );
     } else {
       console.log(blue('│  ') + dim('   Result: ') + gray(String(result)));
     }
@@ -155,7 +172,11 @@ export class Logger {
 
   agentJsonRetry(error: string, attempt: number, max: number) {
     if (this.verbose) {
-      console.log(blue('│  ') + yellow(`Invalid JSON, retry ${attempt}/${max}`) + (error ? gray(` (${error})`) : ''));
+      console.log(
+        blue('│  ') +
+          yellow(`Invalid JSON, retry ${attempt}/${max}`) +
+          (error ? gray(` (${error})`) : ''),
+      );
     } else {
       console.log(blue('│  ') + yellow(`Invalid JSON, retry ${attempt}/${max}`));
     }
@@ -176,7 +197,7 @@ export class Logger {
 
   validationNode(id: string, type: string, details: string[] = []) {
     console.log(dim('\n  Node: ') + white(id) + dim(` (${type})`));
-    details.forEach(detail => {
+    details.forEach((detail) => {
       console.log(dim('    ' + detail));
     });
   }

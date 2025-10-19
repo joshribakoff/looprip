@@ -24,13 +24,13 @@ export class PipelineExecutor {
 
   async execute(
     pipeline: Pipeline,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<{ success: boolean; outputs: NodeOutput[] }> {
     const state: PipelineState = {
       nodes: {},
       changedFiles: new Set(),
       workingDirectory: context.workingDirectory,
-      userPrompt: context.userPrompt
+      userPrompt: context.userPrompt,
     };
 
     const outputs: NodeOutput[] = [];
@@ -42,7 +42,7 @@ export class PipelineExecutor {
 
       const executor = this.getExecutor(node);
       const output = await executor.execute(node, state, context);
-      
+
       outputs.push(output);
       state.nodes[node.id] = output;
 
@@ -51,7 +51,7 @@ export class PipelineExecutor {
       } else {
         this.logger.nodeFailed(node.id, output.error || 'Unknown error', output.duration);
         this.logger.pipelineFailed();
-        
+
         // Gates and failed nodes stop the pipeline
         return { success: false, outputs };
       }

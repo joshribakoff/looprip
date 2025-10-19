@@ -19,10 +19,7 @@ import { createPrompt } from './createPrompt.js';
 
 const program = new Command();
 
-program
-  .name('p')
-  .description('Execute agentic pipeline YAML configurations')
-  .version('0.1.0');
+program.name('p').description('Execute agentic pipeline YAML configurations').version('0.1.0');
 
 program
   .command('run')
@@ -34,17 +31,17 @@ program
   .option('--api-key <key>', 'Anthropic API key (or set ANTHROPIC_API_KEY env var)')
   .action(async (pipelinePath: string, options: any) => {
     const logger = new Logger(options.verbose);
-    
+
     try {
       const absolutePath = resolve(process.cwd(), pipelinePath);
-      
+
       logger.loading(`Loading pipeline: ${absolutePath}`);
-      
+
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(absolutePath);
-      
+
       logger.info('Pipeline validated successfully');
-      
+
       if (options.dryRun) {
         logger.dryRun();
         console.log(bold('Pipeline Structure:'));
@@ -55,17 +52,17 @@ program
         }
         return;
       }
-      
+
       const executor = new PipelineExecutor(options.apiKey, logger);
       const context = {
         workingDirectory: process.cwd(),
         environment: {},
         userPrompt: options.prompt,
-        verbose: options.verbose
+        verbose: options.verbose,
       };
-      
+
       const result = await executor.execute(pipeline, context);
-      
+
       if (result.success) {
         process.exit(0);
       } else {
@@ -78,9 +75,7 @@ program
   });
 
 // Prompt creation command: fast scaffold of a Markdown prompt file
-const promptCmd = program
-  .command('prompt')
-  .description('Prompt utilities');
+const promptCmd = program.command('prompt').description('Prompt utilities');
 
 promptCmd
   .command('create')
@@ -106,7 +101,7 @@ promptCmd
   });
 
 // Helper: recursively find pipeline files (pipeline.yaml|yml) under cwd
-async function findPipelineFiles(baseDir: string): Promise<string[]> {
+async function _findPipelineFiles(baseDir: string): Promise<string[]> {
   const results: string[] = [];
   async function walk(dir: string) {
     let entries;
@@ -115,18 +110,21 @@ async function findPipelineFiles(baseDir: string): Promise<string[]> {
     } catch {
       return; // ignore unreadable dirs
     }
-    await Promise.all(entries.map(async (entry) => {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        // Skip node_modules and dist for speed
-        if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') return;
-        await walk(full);
-      } else if (entry.isFile()) {
-        if (/^pipeline\.ya?ml$/i.test(entry.name)) {
-          results.push(full);
+    await Promise.all(
+      entries.map(async (entry) => {
+        const full = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+          // Skip node_modules and dist for speed
+          if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist')
+            return;
+          await walk(full);
+        } else if (entry.isFile()) {
+          if (/^pipeline\.ya?ml$/i.test(entry.name)) {
+            results.push(full);
+          }
         }
-      }
-    }));
+      }),
+    );
   }
   await walk(baseDir);
   return results.sort();
@@ -145,8 +143,8 @@ program
 
     // Clear the terminal and prepare for full-screen mode
     process.stdout.write('\x1b[2J\x1b[H');
-    
-    const {waitUntilExit} = render(React.createElement(InteractiveApp));
+
+    const { waitUntilExit } = render(React.createElement(InteractiveApp));
     await waitUntilExit();
   });
 
@@ -156,28 +154,28 @@ program
   .argument('<pipeline>', 'Path to pipeline YAML file')
   .action(async (pipelinePath: string) => {
     const logger = new Logger(true);
-    
+
     try {
       const absolutePath = resolve(process.cwd(), pipelinePath);
-      
+
       logger.validationStart(absolutePath);
-      
+
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(absolutePath);
-      
+
       logger.validationSuccess();
       console.log(bold('Pipeline Structure:'));
       logger.validationInfo('Name', pipeline.name || 'Unnamed');
       logger.validationInfo('Description', pipeline.description || 'None');
       logger.validationInfo('Nodes', pipeline.nodes.length.toString());
-      
+
       for (const node of pipeline.nodes) {
         const details: string[] = [];
-        
+
         if (node.description) {
           details.push(`Description: ${node.description}`);
         }
-        
+
         if (node.type === 'task') {
           details.push(`Command: ${node.command}`);
         } else if (node.type === 'agent') {
@@ -186,10 +184,10 @@ program
         } else if (node.type === 'gate') {
           details.push(`Command: ${node.command}`);
         }
-        
+
         logger.validationNode(node.id, node.type, details);
       }
-      
+
       process.exit(0);
     } catch (error: any) {
       logger.error('Validation failed', error.message);
@@ -199,7 +197,10 @@ program
 
 // Default behavior: if no subcommand is provided and we're in a TTY and not CI,
 // automatically enter interactive mode. Otherwise, use standard parsing.
-const isCI = !!process.env.CI && String(process.env.CI).toLowerCase() !== 'false' && String(process.env.CI) !== '0';
+const isCI =
+  !!process.env.CI &&
+  String(process.env.CI).toLowerCase() !== 'false' &&
+  String(process.env.CI) !== '0';
 
 const hasSubcommand = process.argv.length > 2;
 

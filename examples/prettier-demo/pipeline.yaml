@@ -13,22 +13,22 @@ nodes:
       interface   User{name:string;age:number;}
       ENDCODE
     track_changes: true
-    
+
   - id: show-before
     type: task
     description: Show the messy code
     command: echo "=== BEFORE FORMATTING ===" && cat {{changed_files}}
-    
+
   - id: format
     type: task
     description: Format with Prettier on changed files
     command: npx prettier --write {{changed_files}}
-    
+
   - id: show-after
     type: task
     description: Show the formatted code
     command: echo "=== AFTER FORMATTING ===" && cat {{changed_files}}
-    
+
   - id: cleanup
     type: task
     description: Clean up changed files

@@ -8,4 +8,4 @@ nodes:
     model: claude-3-5-sonnet-20241022
     prompt: "List all files in the 'docs' directory and return them in the specified format. Use the file_list tool."
     tools: [file_list]
-    output_schema: "array<{name: string, type: string}>"
+    output_schema: 'array<{name: string, type: string}>'

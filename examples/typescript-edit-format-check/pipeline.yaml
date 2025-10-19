@@ -5,7 +5,7 @@ nodes:
   - id: agent-edit
     type: agent
     description: Make code changes based on user request
-    prompt: "{{prompt}}"
+    prompt: '{{prompt}}'
     tools: [file_read, file_write]
     output_schema:
       type: object
@@ -20,9 +20,9 @@ nodes:
     type: task
     description: Format modified files with Prettier
     command: npx prettier --write {{changed_files}}
-    
+
   - id: typecheck
     type: gate
     description: Verify TypeScript compilation
     command: npx tsc --noEmit
-    message: "TypeScript compilation failed"
+    message: 'TypeScript compilation failed'

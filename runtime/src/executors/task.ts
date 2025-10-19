@@ -21,45 +21,41 @@ export class TaskExecutor implements NodeExecutor {
   async execute(
     node: TaskNode,
     state: PipelineState,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<NodeOutput> {
     const startTime = Date.now();
-    
+
     try {
       // Interpolate command with current state
       const command = this.templateEngine.interpolate(node.command, state);
-      
+
       this.logger.taskCommand(command);
-      
+
       // Get file modification times before execution if tracking changes
-      const beforeFiles = node.track_changes 
+      const beforeFiles = node.track_changes
         ? await this.getFileTimestamps(node.cwd || context.workingDirectory)
         : new Map();
-      
+
       // Execute the command
-      const output = await this.runCommand(
-        command,
-        node.cwd || context.workingDirectory,
-        { ...context.environment, ...node.env }
-      );
-      
+      const output = await this.runCommand(command, node.cwd || context.workingDirectory, {
+        ...context.environment,
+        ...node.env,
+      });
+
       // Detect changed files if tracking enabled
       const changedFiles = node.track_changes
-        ? await this.detectChangedFiles(
-            node.cwd || context.workingDirectory,
-            beforeFiles
-          )
+        ? await this.detectChangedFiles(node.cwd || context.workingDirectory, beforeFiles)
         : [];
-      
+
       // Update global changed files set
       for (const file of changedFiles) {
         state.changedFiles.add(file);
       }
-      
+
       this.logger.taskFilesChanged(changedFiles);
-      
+
       const endTime = Date.now();
-      
+
       return {
         nodeId: node.id,
         type: 'task',
@@ -68,11 +64,11 @@ export class TaskExecutor implements NodeExecutor {
         changedFiles,
         startTime,
         endTime,
-        duration: endTime - startTime
+        duration: endTime - startTime,
       };
     } catch (error: any) {
       const endTime = Date.now();
-      
+
       return {
         nodeId: node.id,
         type: 'task',
@@ -80,7 +76,7 @@ export class TaskExecutor implements NodeExecutor {
         error: error.message,
         startTime,
         endTime,
-        duration: endTime - startTime
+        duration: endTime - startTime,
       };
     }
   }
@@ -88,14 +84,14 @@ export class TaskExecutor implements NodeExecutor {
   private runCommand(
     command: string,
     cwd: string,
-    env: Record<string, string>
+    env: Record<string, string>,
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
       const child = spawn(command, {
         cwd,
         env: { ...process.env, ...env },
         shell: true,
-        stdio: ['inherit', 'pipe', 'pipe']
+        stdio: ['inherit', 'pipe', 'pipe'],
       });
 
       let stdout = '';
@@ -129,7 +125,7 @@ export class TaskExecutor implements NodeExecutor {
 
   private async getFileTimestamps(dir: string): Promise<Map<string, number>> {
     const timestamps = new Map<string, number>();
-    
+
     try {
       await this.walkDirectory(dir, async (filePath) => {
         try {
@@ -142,21 +138,21 @@ export class TaskExecutor implements NodeExecutor {
     } catch {
       // Ignore errors walking directory
     }
-    
+
     return timestamps;
   }
 
   private async detectChangedFiles(
     dir: string,
-    beforeFiles: Map<string, number>
+    beforeFiles: Map<string, number>,
   ): Promise<string[]> {
     const changedFiles: string[] = [];
-    
+
     await this.walkDirectory(dir, async (filePath) => {
       try {
         const stats = await stat(filePath);
         const beforeTime = beforeFiles.get(filePath);
-        
+
         if (!beforeTime || stats.mtimeMs > beforeTime) {
           changedFiles.push(filePath);
         }
@@ -164,26 +160,26 @@ export class TaskExecutor implements NodeExecutor {
         // Ignore files we can't stat
       }
     });
-    
+
     return changedFiles;
   }
 
   private async walkDirectory(
     dir: string,
-    callback: (filePath: string) => Promise<void>
+    callback: (filePath: string) => Promise<void>,
   ): Promise<void> {
     // Skip node_modules and hidden directories
     const basename = dir.split('/').pop() || '';
     if (basename.startsWith('.') || basename === 'node_modules') {
       return;
     }
-    
+
     try {
       const entries = await readdir(dir, { withFileTypes: true });
-      
+
       for (const entry of entries) {
         const fullPath = join(dir, entry.name);
-        
+
         if (entry.isDirectory()) {
           await this.walkDirectory(fullPath, callback);
         } else if (entry.isFile()) {
