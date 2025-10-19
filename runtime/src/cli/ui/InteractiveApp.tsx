@@ -136,18 +136,24 @@ function AppInner() {
     </Box>
   );
 
+  const wrapInBorder = (content: React.ReactNode) => (
+    <Box borderStyle="round" borderColor="cyan" padding={1} flexDirection="column">
+      {content}
+    </Box>
+  );
+
   if (mode === 'main-menu') {
-    return (
+    return wrapInBorder(
       <MainMenuScreen header={header} index={index} notice={notice} />
     );
   }
 
   if (mode === 'create-prompt') {
-    return <CreatePromptScreen header={header} />;
+    return wrapInBorder(<CreatePromptScreen header={header} />);
   }
 
   if (mode === 'custom-path') {
-    return (
+    return wrapInBorder(
       <CustomPathScreen
         header={header}
         value={customPath}
@@ -162,7 +168,7 @@ function AppInner() {
   }
 
   if (mode === 'enter-prompt') {
-    return (
+    return wrapInBorder(
       <EnterPromptScreen
         header={header}
         value={userPrompt}
@@ -174,7 +180,7 @@ function AppInner() {
   }
 
   if (mode === 'running' || mode === 'summary') {
-    return (
+    return wrapInBorder(
       <StatusScreen
         header={header}
         mode={mode}
@@ -187,7 +193,7 @@ function AppInner() {
   }
 
   // Select mode
-  return (
+  return wrapInBorder(
     <SelectScreen header={header} choices={choices} index={index} notice={notice} />
   );
 }

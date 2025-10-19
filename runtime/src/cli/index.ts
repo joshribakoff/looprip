@@ -143,6 +143,9 @@ program
       process.exit(2);
     }
 
+    // Clear the terminal and prepare for full-screen mode
+    process.stdout.write('\x1b[2J\x1b[H');
+    
     const {waitUntilExit} = render(React.createElement(InteractiveApp));
     await waitUntilExit();
   });
