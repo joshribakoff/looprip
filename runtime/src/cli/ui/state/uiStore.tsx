@@ -1,11 +1,18 @@
 import React, {createContext, useContext, useReducer} from 'react';
+import { RunMetadata } from '../../../types/run.js';
 
 // Shared UI mode across screens
-export type Mode = 'main-menu' | 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt' | 'select-prompt';
+export type Mode = 'main-menu' | 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt' | 'select-prompt' | 'job-list' | 'job-detail';
 
 export type Notice = { text: string; color?: 'green' | 'red' | 'yellow' } | null;
 
 export type UIStatus = 'idle' | 'loading' | 'success' | 'error';
+
+export interface JobInfo {
+  run: RunMetadata;
+  logLines: string[];
+  autoFollow: boolean;
+}
 
 export type UIState = {
   cwd: string;
@@ -18,6 +25,8 @@ export type UIState = {
   lastResultSuccess: boolean | null;
   notice: Notice;
   scrollOffset: number;
+  jobs: JobInfo[];
+  selectedJobId: string | null;
 };
 
 export type UIAction =
@@ -30,17 +39,27 @@ export type UIAction =
   | { type: 'NAVIGATE_TO_CREATE_PROMPT' }
   | { type: 'NAVIGATE_TO_CUSTOM_PATH' }
   | { type: 'NAVIGATE_TO_ENTER_PROMPT'; pipelinePath: string }
+  | { type: 'NAVIGATE_TO_JOB_LIST' }
+  | { type: 'NAVIGATE_TO_JOB_DETAIL'; jobId: string }
   | { type: 'RETURN_FROM_SCREEN' }
   // Input events
   | { type: 'INPUT_CHANGED'; field: 'customPath' | 'userPrompt'; value: string }
   | { type: 'SCROLL_UP' }
   | { type: 'SCROLL_DOWN' }
+  | { type: 'TOGGLE_AUTO_FOLLOW' }
   // Pipeline lifecycle events
   | { type: 'PIPELINE_LOADING_STARTED'; path: string }
   | { type: 'PIPELINE_EXECUTION_STARTED' }
   | { type: 'PIPELINE_COMPLETED'; success: boolean; message: string }
   | { type: 'PIPELINE_FAILED'; error: string }
   | { type: 'PIPELINE_NOT_FOUND'; path: string }
+  // Job events
+  | { type: 'JOB_QUEUED'; run: RunMetadata }
+  | { type: 'JOB_STARTED'; runId: string }
+  | { type: 'JOB_UPDATED'; runId: string; run: RunMetadata; newLogLines?: string[] }
+  | { type: 'JOB_COMPLETED'; runId: string; success: boolean }
+  | { type: 'JOB_FAILED'; runId: string; error: string }
+  | { type: 'JOBS_LOADED'; runs: RunMetadata[] }
   // Prompt events
   | { type: 'PROMPT_CREATED'; filePath: string; relativePath: string }
   | { type: 'PROMPT_SUBMITTED' }
@@ -63,6 +82,8 @@ export function createInitialState(params: { cwd: string }): UIState {
     lastResultSuccess: null,
     notice: null,
     scrollOffset: 0,
+    jobs: [],
+    selectedJobId: null,
   };
 }
 
@@ -85,6 +106,10 @@ export function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, mode: 'custom-path', customPath: '' };
     case 'NAVIGATE_TO_ENTER_PROMPT':
       return { ...state, mode: 'enter-prompt', message: action.pipelinePath, status: 'idle' };
+    case 'NAVIGATE_TO_JOB_LIST':
+      return { ...state, mode: 'job-list', index: 0, notice: null };
+    case 'NAVIGATE_TO_JOB_DETAIL':
+      return { ...state, mode: 'job-detail', selectedJobId: action.jobId, scrollOffset: 0 };
     case 'RETURN_FROM_SCREEN':
       return { ...state, mode: 'select', customPath: '', userPrompt: '' };
     
@@ -95,6 +120,18 @@ export function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, scrollOffset: Math.max(0, state.scrollOffset - 1) };
     case 'SCROLL_DOWN':
       return { ...state, scrollOffset: state.scrollOffset + 1 };
+    case 'TOGGLE_AUTO_FOLLOW': {
+      const job = state.jobs.find(j => j.run.id === state.selectedJobId);
+      if (!job) return state;
+      return {
+        ...state,
+        jobs: state.jobs.map(j => 
+          j.run.id === state.selectedJobId 
+            ? { ...j, autoFollow: !j.autoFollow }
+            : j
+        ),
+      };
+    }
     
     // Pipeline lifecycle
     case 'PIPELINE_LOADING_STARTED':
@@ -107,6 +144,60 @@ export function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, mode: 'summary', status: 'error', message: action.error, lastResultSuccess: false };
     case 'PIPELINE_NOT_FOUND':
       return { ...state, mode: 'summary', status: 'error', message: `Pipeline not found: ${action.path}`, lastResultSuccess: false };
+    
+    // Jobs
+    case 'JOB_QUEUED': {
+      const newJob: JobInfo = { run: action.run, logLines: [], autoFollow: true };
+      return { ...state, jobs: [...state.jobs, newJob] };
+    }
+    case 'JOB_STARTED':
+      return {
+        ...state,
+        jobs: state.jobs.map(j => 
+          j.run.id === action.runId 
+            ? { ...j, run: { ...j.run, status: 'running' } }
+            : j
+        ),
+      };
+    case 'JOB_UPDATED': {
+      return {
+        ...state,
+        jobs: state.jobs.map(j => {
+          if (j.run.id === action.runId) {
+            const newLogLines = action.newLogLines || [];
+            const updatedLogLines = [...j.logLines, ...newLogLines];
+            return { ...j, run: action.run, logLines: updatedLogLines };
+          }
+          return j;
+        }),
+      };
+    }
+    case 'JOB_COMPLETED':
+      return {
+        ...state,
+        jobs: state.jobs.map(j => 
+          j.run.id === action.runId 
+            ? { ...j, run: { ...j.run, status: 'completed' } }
+            : j
+        ),
+      };
+    case 'JOB_FAILED':
+      return {
+        ...state,
+        jobs: state.jobs.map(j => 
+          j.run.id === action.runId 
+            ? { ...j, run: { ...j.run, status: 'failed', error: action.error } }
+            : j
+        ),
+      };
+    case 'JOBS_LOADED': {
+      const jobs: JobInfo[] = action.runs.map(run => ({
+        run,
+        logLines: [],
+        autoFollow: false,
+      }));
+      return { ...state, jobs };
+    }
     
     // Prompts
     case 'PROMPT_CREATED':
@@ -166,12 +257,15 @@ export const actions = {
   navigateToCreatePrompt: (): UIAction => ({ type: 'NAVIGATE_TO_CREATE_PROMPT' }),
   navigateToCustomPath: (): UIAction => ({ type: 'NAVIGATE_TO_CUSTOM_PATH' }),
   navigateToEnterPrompt: (pipelinePath: string): UIAction => ({ type: 'NAVIGATE_TO_ENTER_PROMPT', pipelinePath }),
+  navigateToJobList: (): UIAction => ({ type: 'NAVIGATE_TO_JOB_LIST' }),
+  navigateToJobDetail: (jobId: string): UIAction => ({ type: 'NAVIGATE_TO_JOB_DETAIL', jobId }),
   returnFromScreen: (): UIAction => ({ type: 'RETURN_FROM_SCREEN' }),
   
   // Input
   inputChanged: (field: 'customPath' | 'userPrompt', value: string): UIAction => ({ type: 'INPUT_CHANGED', field, value }),
   scrollUp: (): UIAction => ({ type: 'SCROLL_UP' }),
   scrollDown: (): UIAction => ({ type: 'SCROLL_DOWN' }),
+  toggleAutoFollow: (): UIAction => ({ type: 'TOGGLE_AUTO_FOLLOW' }),
   
   // Pipeline lifecycle
   pipelineLoadingStarted: (path: string): UIAction => ({ type: 'PIPELINE_LOADING_STARTED', path }),
@@ -179,6 +273,14 @@ export const actions = {
   pipelineCompleted: (success: boolean, message: string): UIAction => ({ type: 'PIPELINE_COMPLETED', success, message }),
   pipelineFailed: (error: string): UIAction => ({ type: 'PIPELINE_FAILED', error }),
   pipelineNotFound: (path: string): UIAction => ({ type: 'PIPELINE_NOT_FOUND', path }),
+  
+  // Jobs
+  jobQueued: (run: RunMetadata): UIAction => ({ type: 'JOB_QUEUED', run }),
+  jobStarted: (runId: string): UIAction => ({ type: 'JOB_STARTED', runId }),
+  jobUpdated: (runId: string, run: RunMetadata, newLogLines?: string[]): UIAction => ({ type: 'JOB_UPDATED', runId, run, newLogLines }),
+  jobCompleted: (runId: string, success: boolean): UIAction => ({ type: 'JOB_COMPLETED', runId, success }),
+  jobFailed: (runId: string, error: string): UIAction => ({ type: 'JOB_FAILED', runId, error }),
+  jobsLoaded: (runs: RunMetadata[]): UIAction => ({ type: 'JOBS_LOADED', runs }),
   
   // Prompts
   promptCreated: (filePath: string, relativePath: string): UIAction => ({ type: 'PROMPT_CREATED', filePath, relativePath }),
