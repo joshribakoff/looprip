@@ -79,7 +79,7 @@ Note: Don’t copy Ink docs verbatim into this repo. Link to them instead.
   4) Wire it in `InteractiveApp.tsx` based on `mode`.
 - When adding CLI commands:
   - Define a new `program.command()` in `runtime/src/cli/index.ts`.
-  - Keep parsing/printing consistent (use `chalk` and `Logger`).
+  - Keep parsing/printing consistent (use `Logger` and helpers in `terminalStyles.ts`).
 
 ## Runtime architecture checkpoints
 

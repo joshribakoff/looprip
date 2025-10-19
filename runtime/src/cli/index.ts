@@ -9,7 +9,7 @@ import { resolve } from 'path';
 import { PipelineParser } from '../core/parser.js';
 import { PipelineExecutor } from '../executors/index.js';
 import { Logger } from '../utils/logger.js';
-import chalk from 'chalk';
+import { bold, dim, gray, green, red, yellow } from '../utils/terminalStyles.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { render } from 'ink';
@@ -47,11 +47,11 @@ program
       
       if (options.dryRun) {
         logger.dryRun();
-        console.log(chalk.bold('Pipeline Structure:'));
+        console.log(bold('Pipeline Structure:'));
         logger.validationInfo('Name', pipeline.name || 'Unnamed');
         logger.validationInfo('Nodes', pipeline.nodes.length.toString());
         for (const node of pipeline.nodes) {
-          console.log(chalk.dim(`  • ${node.id}`) + chalk.gray(` (${node.type})`));
+          console.log(dim(`  • ${node.id}`) + gray(` (${node.type})`));
         }
         return;
       }
@@ -97,9 +97,9 @@ promptCmd
     });
     const rel = path.relative(process.cwd(), filePath) || filePath;
     if (created) {
-      console.log(chalk.green('Created:'), rel);
+      console.log(green('Created:'), rel);
     } else {
-      console.log(chalk.yellow('Exists:'), rel);
+      console.log(yellow('Exists:'), rel);
     }
     // Print absolute path so terminals can cmd-click
     console.log(path.resolve(filePath));
@@ -139,7 +139,7 @@ program
   .action(async () => {
     // If the terminal is non-interactive, bail out
     if (!process.stdout.isTTY || !process.stdin.isTTY) {
-      console.error(chalk.red('Interactive mode requires a TTY terminal.'));
+      console.error(red('Interactive mode requires a TTY terminal.'));
       process.exit(2);
     }
 
@@ -166,7 +166,7 @@ program
       const pipeline = await parser.loadFromFile(absolutePath);
       
       logger.validationSuccess();
-      console.log(chalk.bold('Pipeline Structure:'));
+      console.log(bold('Pipeline Structure:'));
       logger.validationInfo('Name', pipeline.name || 'Unnamed');
       logger.validationInfo('Description', pipeline.description || 'None');
       logger.validationInfo('Nodes', pipeline.nodes.length.toString());
