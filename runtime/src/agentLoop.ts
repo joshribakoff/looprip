@@ -1,54 +1,10 @@
-import Anthropic from '@anthropic-ai/sdk';
-import OpenAI from 'openai';
-import type { ChatCompletionMessageParam } from 'openai/resources/chat/completions';
 import { z } from 'zod';
 
-import { readFileAction } from './actions/readFile.js';
-import { writeFileAction } from './actions/writeFile.js';
-import { config, type Provider } from './config.js';
-
-const systemPrompt = [
-  'You are a coding agent running inside a local runtime.',
-  'Always respond with JSON only. Never include prose or commentary.',
-  'Output must follow this schema exactly:',
-  '{',
-  '  "actions": [',
-  '    { "action": "read_file", "args": { "path": "<relative-or-absolute-path>" } }',
-  '  ]',
-  '}',
-  'Guidelines:',
-  '- Valid actions: "read_file" and "write_file".',
-  '- Always return an "actions" array, even for a single action.',
-  '- Use the key "path" for file paths. Do not invent new argument names.',
-  '- For "write_file", include "contents" with the full file text.',
-  '- Return at most two actions.',
-  '- If you need to read a file, request that before attempting a write.',
-].join('\n');
-
-const readFileArgsSchema = z
-  .object({
-    path: z.string().min(1).optional(),
-    file_path: z.string().min(1).optional(),
-  })
-  .refine((value) => Boolean(value.path ?? value.file_path), {
-    message: 'read_file requires "path"',
-  })
-  .transform((value) => ({ path: value.path ?? value.file_path! }));
-
-const writeFileArgsSchema = z
-  .object({
-    path: z.string().min(1).optional(),
-    file_path: z.string().min(1).optional(),
-    contents: z.string().optional(),
-    content: z.string().optional(),
-  })
-  .refine((value) => Boolean((value.path ?? value.file_path) && (value.contents ?? value.content)), {
-    message: 'write_file requires "path" and "contents"',
-  })
-  .transform((value) => ({
-    path: value.path ?? value.file_path!,
-    contents: value.contents ?? value.content!,
-  }));
+import { readFileAction, readFileArgsSchema } from './actions/readFile.js';
+import { writeFileAction, writeFileArgsSchema } from './actions/writeFile.js';
+import { config } from './config.js';
+import { callModel, type ConversationEntry } from './models/index.js';
+import { loadSystemPrompt } from './utils/systemPrompt.js';
 
 const agentActionSchema = z.discriminatedUnion('action', [
   z.object({
@@ -62,65 +18,6 @@ const agentActionSchema = z.discriminatedUnion('action', [
 ]);
 
 type AgentAction = z.infer<typeof agentActionSchema>;
-
-type ConversationEntry = {
-  role: 'user' | 'assistant';
-  content: string;
-};
-
-async function callModel(provider: Provider, history: ConversationEntry[]): Promise<string> {
-    console.log('[agent] calling  model:', provider);
-  if (provider === 'openai') {
-    if (!config.openaiApiKey) {
-      throw new Error('OPENAI_API_KEY is required for the OpenAI provider.');
-    }
-
-    const client = new OpenAI({ apiKey: config.openaiApiKey });
-    const messages: ChatCompletionMessageParam[] = [
-      { role: 'system', content: systemPrompt },
-      ...history.map((entry) => ({ role: entry.role, content: entry.content })),
-    ];
-
-    console.log(1,messages)
-    const completion = await client.chat.completions.create({
-        model: config.openaiModel,
-        messages,
-        temperature: 0,
-    });
-    console.log(2)
-
-    const choice = completion.choices?.[0]?.message?.content;
-    if (!choice) {
-      throw new Error('OpenAI returned an empty response.');
-    }
-
-    return choice.trim();
-  }
-
-  if (!config.anthropicApiKey) {
-    throw new Error('ANTHROPIC_API_KEY is required for the Anthropic provider.');
-  }
-
-  const client = new Anthropic({ apiKey: config.anthropicApiKey });
-
-  const response = await client.messages.create({
-    model: config.anthropicModel,
-    system: systemPrompt,
-    max_tokens: 1024,
-    temperature: 0,
-    messages: history.map((entry) => ({
-      role: entry.role,
-      content: entry.content,
-    })),
-  });
-
-  const textPart = response.content.find((part) => part.type === 'text');
-  if (!textPart || !textPart.text) {
-    throw new Error('Anthropic returned an empty response.');
-  }
-
-  return textPart.text.trim();
-}
 
 function extractJsonPayload(raw: string): unknown {
   const trimmed = raw.trim();
@@ -214,6 +111,8 @@ function normalizeActionsPayload(payload: unknown): unknown[] {
 }
 
 export async function runAgentLoop(): Promise<void> {
+  const systemPrompt = await loadSystemPrompt();
+  
   const history: ConversationEntry[] = [
     {
       role: 'user',
@@ -222,7 +121,7 @@ export async function runAgentLoop(): Promise<void> {
   ];
 
   for (let iteration = 0; iteration < config.maxIterations; iteration += 1) {
-    const rawReply = await callModel(config.provider, history);
+    const rawReply = await callModel(config.provider, systemPrompt, history);
     history.push({ role: 'assistant', content: rawReply });
 
     const actions = parseActionPayload(rawReply);
