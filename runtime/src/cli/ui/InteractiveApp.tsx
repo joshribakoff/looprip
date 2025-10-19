@@ -1,6 +1,5 @@
 import React, {useEffect, useState} from 'react';
 import {Box, Text, useInput, useApp, Spacer} from 'ink';
-import TextInput from 'ink-text-input';
 import path from 'path';
 import fs from 'fs/promises';
 import chalk from 'chalk';
@@ -13,33 +12,7 @@ import StatusScreen from './screens/StatusScreen.js';
 import CustomPathScreen from './screens/CustomPathScreen.js';
 import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
-
-type PipelineChoice = { title: string; value: string };
-
-async function findPipelineFiles(baseDir: string): Promise<string[]> {
-  const results: string[] = [];
-  async function walk(dir: string) {
-    let entries;
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true });
-    } catch {
-      return; // ignore unreadable dirs
-    }
-    for (const entry of entries) {
-      const full = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
-        if (entry.name === 'node_modules' || entry.name === '.git' || entry.name === 'dist') continue;
-        await walk(full);
-      } else if (entry.isFile()) {
-        if (/^pipeline\.ya?ml$/i.test(entry.name)) {
-          results.push(full);
-        }
-      }
-    }
-  }
-  await walk(baseDir);
-  return results.sort();
-}
+import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 
 function detectNeedsPrompt(pipeline: any): boolean {
   const containsPromptVar = (val: any): boolean => {
@@ -56,7 +29,7 @@ type Mode = 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 
 export function InteractiveApp() {
   const {exit} = useApp();
   const cwd = process.cwd();
-  const [choices, setChoices] = useState<PipelineChoice[]>([]);
+  const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const [index, setIndex] = useState(0);
   const [mode, setMode] = useState<Mode>('select');
   const [customPath, setCustomPath] = useState('');
@@ -69,21 +42,12 @@ export function InteractiveApp() {
   // Toast/notice shown when returning to the main menu
   const [notice, setNotice] = useState<{ text: string; color?: 'green' | 'red' | 'yellow' } | null>(null);
 
-  // Load choices on mount, and refresh on "r"
-  const refreshChoices = async () => {
-    const found = await findPipelineFiles(cwd);
-    const nextChoices: PipelineChoice[] = [
-      ...found.map((abs) => ({ title: path.relative(cwd, abs) || abs, value: abs })),
-      { title: 'Enter custom path…', value: '__custom__' },
-      { title: 'Create new prompt…', value: '__create_prompt__' },
-    ];
-    setChoices(nextChoices);
-    if (index >= nextChoices.length) setIndex(Math.max(0, nextChoices.length - 1));
-  };
-
+  // Keep index in range when choices change
   useEffect(() => {
-    void refreshChoices();
-  }, []);
+    if (index >= choices.length) {
+      setIndex(Math.max(0, choices.length - 1));
+    }
+  }, [choices, index]);
 
   // Helper for .md normalization (mirrors CLI behavior)
   const ensureMd = (fp: string) => (fp.toLowerCase().endsWith('.md') ? fp : `${fp}.md`);
