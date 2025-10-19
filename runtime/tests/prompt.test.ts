@@ -2,26 +2,26 @@ import { describe, it, expect } from 'vitest';
 import { parsePromptString, PromptFrontMatterSchema, updatePromptStatus } from '../src/core/prompt.js';
 
 const sample = `---
-id: ex
-title: Example
 status: draft
-priority: high
+provider: openai
+model: gpt-4o-mini
 ---
 Body here
 `;
 
 describe('Prompt front matter schema', () => {
   it('validates minimal required fields', () => {
-    const parsed = PromptFrontMatterSchema.safeParse({ id: 'a', title: 'b' });
+    const parsed = PromptFrontMatterSchema.safeParse({});
     expect(parsed.success).toBe(true);
     if (parsed.success) {
       expect(parsed.data.status).toBe('draft');
-      expect(parsed.data.priority).toBe('medium');
+      expect(parsed.data.provider).toBe('openai');
+      expect(parsed.data.model).toBeUndefined();
     }
   });
 
   it('rejects invalid status', () => {
-    const parsed = PromptFrontMatterSchema.safeParse({ id: 'a', title: 'b', status: 'nope' });
+    const parsed = PromptFrontMatterSchema.safeParse({ status: 'nope' });
     expect(parsed.success).toBe(false);
   });
 });
@@ -29,7 +29,7 @@ describe('Prompt front matter schema', () => {
 describe('parsePromptString', () => {
   it('parses front matter and body', () => {
     const out = parsePromptString(sample);
-    expect(out.frontMatter.id).toBe('ex');
+    expect(out.frontMatter.status).toBe('draft');
     expect(out.body.trim()).toBe('Body here');
   });
 });
