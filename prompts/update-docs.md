@@ -54,6 +54,4 @@ You could just as easily swap gpt5 for a claude-cli call or a local llama model 
 
 The point is you own the pipeline, not the AI vendor.
 
-⸻
-
-Would you like me to follow that with a short paragraph for your docs explaining how this differs from “just another workflow engine”? Something that highlights that this is workspace-level orchestration — like Argo, but for developers and local agents?
+Unlike Cursor or Copilot, we don’t hide the loop — you own it.
