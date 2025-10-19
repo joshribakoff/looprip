@@ -12,6 +12,6 @@
     "test": "./test.sh",
     "clean": "cd runtime && npm run clean",
     "p": "./p",
-    "install:cli": "./scripts/install.sh"
+    "install:cli": "bash ./scripts/install.sh"
   }
 }
