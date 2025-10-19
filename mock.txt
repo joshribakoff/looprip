@@ -1,1 +1,0 @@
-When I tried to run the TypeScript example, it failed because it's trying to hit the Anthropic API. This should be kept in one adapter, but let's make a new adapter that's just a mock API that mocks out what calling the API would do. That way, the project runs by default locally without any API key setup. 

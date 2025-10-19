@@ -1,0 +1,7 @@
+When I tried to run the TypeScript example, it failed because it's trying to hit the Anthropic API. 
+
+This should just be one adapter, but let's make a new adapter that's a mock LLM that mocks out what calling the API would do, eg. just returns hello world.
+
+ That way, the project runs by default locally without any API key setup. 
+
+ And then I want you to also make sure we have a clean TypeScript interface for this concept of the agent and a whole module or folder called agents somewhere in the project would that have the interface? Then each of the implementations: we'll have one for Anthropic, one for Codex, one for LAMA, one for the mock. You can scaffold them out with boilerplate code; they don't have to have real implementations yet. It could be like to do or throw an error that it's not implemented yet.  But it would be nice if you add prompt files, that way we can continue the execution later on and add these next to the the files. 

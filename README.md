@@ -4,22 +4,31 @@ A runtime for executing agentic pipelines defined in YAML. Build AI-powered work
 
 ## Quick Start
 
+Install the `p` command on your PATH (one time):
+
+```bash
+# From the repo root
+npm run install:cli
+```
+
+Then run pipelines with the short command:
+
 ```bash
 # Build and setup (one command does everything)
 npm run build
 
 # Run a pipeline
-./p run examples/simple-task-test/pipeline.yaml
+p run examples/simple-task-test/pipeline.yaml
 
 # Run with a prompt for agent nodes
-./p run examples/move-files-to-subfolder/pipeline.yaml \
+p run examples/move-files-to-subfolder/pipeline.yaml \
   --prompt "Move all .txt files to a subfolder"
 
 # Validate a pipeline
-./p validate examples/gate-test/pipeline.yaml
+p validate examples/gate-test/pipeline.yaml
 ```
 
-Tip: Use the short local runner `./p`. Alternatively, you can use an npm script: `npm run p -- run examples/simple-task-test/pipeline.yaml`.
+Tip: After running `npm link`, the `p` command is available globally in your shell. You can also use the npm script locally: `npm run p -- run examples/simple-task-test/pipeline.yaml`.
 
 ## What Is This?
 
@@ -135,14 +144,14 @@ Results:
 
 Or pass via CLI:
 ```bash
-./p run pipeline.yaml --api-key sk-...
+p run pipeline.yaml --api-key sk-...
 ```
 
 ## CLI Commands
 
 ### Run a pipeline
 ```bash
-./p run <pipeline.yaml> [options]
+p run <pipeline.yaml> [options]
 
 Options:
   -p, --prompt <text>   User prompt for agent nodes
@@ -153,7 +162,7 @@ Options:
 
 ### Validate a pipeline
 ```bash
-./p validate <pipeline.yaml>
+p validate <pipeline.yaml>
 ```
 
 ## Why This Approach?

@@ -29,7 +29,7 @@ To run an example:
 
 ```bash
 cd examples/simple-hello-world
-agent-pipeline run pipeline.yaml
+p run pipeline.yaml
 ```
 
 ## Learning Path

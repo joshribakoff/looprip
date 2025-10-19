@@ -19,7 +19,7 @@ npm link
 cd ..
 
 # Run the pipeline
-agent-pipeline run examples/run-unit-tests/pipeline.yaml
+p run examples/run-unit-tests/pipeline.yaml
 ```
 
 ## Expected Behavior

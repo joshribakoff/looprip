@@ -36,7 +36,7 @@ The type checker acts as a gate - if it fails (non-zero exit code), the pipeline
 npm install prettier typescript
 
 # Execute the pipeline
-agent-pipeline run pipeline.yaml
+p run pipeline.yaml
 ```
 
 ## What This Prevents

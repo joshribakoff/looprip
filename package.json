@@ -4,10 +4,14 @@
   "description": "Agent Pipeline System - Build AI-powered workflows",
   "private": true,
   "type": "module",
+  "bin": {
+    "p": "p"
+  },
   "scripts": {
     "build": "./scripts/build.sh",
     "test": "./test.sh",
     "clean": "cd runtime && npm run clean",
-    "p": "./p"
+    "p": "./p",
+    "install:cli": "./scripts/install.sh"
   }
 }

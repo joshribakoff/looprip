@@ -12,15 +12,16 @@ echo "→ Building runtime..."
 cd runtime
 npm install
 npm run build
+cd ..
 
-# Link CLI globally
+# Link CLI globally (root package exposes `p`)
 echo "→ Linking CLI globally..."
 npm link
 
 echo ""
 echo "✓ Build complete!"
 echo ""
-echo "The 'agent-pipeline' command is now available globally."
+echo "The 'p' command is now available globally."
 echo ""
 echo "Try it:"
-echo "  agent-pipeline run examples/simple-task-test/pipeline.yaml"
+echo "  p run examples/simple-task-test/pipeline.yaml"

@@ -39,7 +39,7 @@ The actual file move is a simple task node - fast and predictable. Agents handle
 ## Running This Example
 
 ```bash
-agent-pipeline run pipeline.yaml --prompt "Move all components to src/components/ui"
+p run pipeline.yaml --prompt "Move all components to src/components/ui"
 ```
 
 ## What This Prevents

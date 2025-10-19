@@ -53,5 +53,5 @@ With this pattern:
 ## Running This Example
 
 ```bash
-agent-pipeline run pipeline.yaml --prompt "Move all TypeScript files to src/subfolder"
+p run pipeline.yaml --prompt "Move all TypeScript files to src/subfolder"
 ```

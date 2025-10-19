@@ -20,11 +20,11 @@ If you're in a TTY and not in CI (CI env var not truthy), the CLI starts interac
 # From repo root
 npx tsx src/cli/index.js
 
-# Or if installed globally as a binary
-agent-pipeline
+# Or if linked globally as `p`
+p
 
 # You can still invoke interactive explicitly
-agent-pipeline interactive
+p interactive
 ```
 
 ### Run a pipeline
@@ -37,13 +37,13 @@ node dist/cli/index.js run path/to/pipeline.yaml --prompt "Your request here"
 Or with the CLI directly after installing:
 
 ```bash
-agent-pipeline run path/to/pipeline.yaml --prompt "Your request here"
+p run path/to/pipeline.yaml --prompt "Your request here"
 ```
 
 ### Validate a pipeline
 
 ```bash
-agent-pipeline validate path/to/pipeline.yaml
+p validate path/to/pipeline.yaml
 ```
 
 ## Development

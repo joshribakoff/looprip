@@ -17,7 +17,7 @@ import prompts from 'prompts';
 const program = new Command();
 
 program
-  .name('agent-pipeline')
+  .name('p')
   .description('Execute agentic pipeline YAML configurations')
   .version('0.1.0');
 

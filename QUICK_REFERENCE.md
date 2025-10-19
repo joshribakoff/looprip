@@ -3,28 +3,28 @@
 ## Installation
 
 ```bash
-cd runtime
-npm install
+# From repo root
 npm run build
+npm link   # installs `p` on your PATH
 ```
 
 ## Basic Commands
 
 ```bash
 # Run a pipeline
-agent-pipeline run pipeline.yaml
+p run pipeline.yaml
 
 # With user prompt
-agent-pipeline run pipeline.yaml --prompt "Your request"
+p run pipeline.yaml --prompt "Your request"
 
 # Verbose mode
-agent-pipeline run pipeline.yaml -v
+p run pipeline.yaml -v
 
 # Dry run (validate only)
-agent-pipeline run pipeline.yaml --dry-run
+p run pipeline.yaml --dry-run
 
 # Validate without running
-agent-pipeline validate pipeline.yaml
+p validate pipeline.yaml
 ```
 
 ## Pipeline YAML Structure
@@ -141,7 +141,7 @@ export ANTHROPIC_API_KEY=sk-...
 
 Or use CLI flag:
 ```bash
-agent-pipeline run pipeline.yaml --api-key sk-...
+p run pipeline.yaml --api-key sk-...
 ```
 
 ## Testing
@@ -204,17 +204,17 @@ nodes:
 
 ### Enable verbose mode
 ```bash
-agent-pipeline run pipeline.yaml -v
+p run pipeline.yaml -v
 ```
 
 ### Validate first
 ```bash
-agent-pipeline validate pipeline.yaml
+p validate pipeline.yaml
 ```
 
 ### Check exit codes
 ```bash
-agent-pipeline run pipeline.yaml
+p run pipeline.yaml
 echo $?  # 0 = success, 1 = failure
 ```
 

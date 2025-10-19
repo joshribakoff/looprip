@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # Tiny runner for the agent pipeline CLI
-# Usage: ./p run <pipeline.yaml> [options]
+# Usage: p run <pipeline.yaml> [options]
 
 if command -v tsx >/dev/null 2>&1; then
   exec tsx src/cli/index.js "$@"

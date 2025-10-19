@@ -1,0 +1,9 @@
+A core idea of this thing is supposed to be that we can set up different workspaces and it will set up different Git work trees and then run different commands that we've set up with different pipelines we've set to trigger on the work tree being cloned. For example, when a new work tree is created and the project is a TypeScript project, we automatically want to start installing the npm dependencies in that work tree via a pipelines
+
+When you run the command, it should ask you whether you want to run a pipeline or create/list/delete/switch a workspace. 
+
+The documentation should also be updated. 
+
+When triggering a pipeline to run, it should be clear which workspace you're triggering it in. 
+
+You've triggered a pipeline to run in a workspace. It should immediately switch to a status view where you see the status of your workspaces in the pipelines that are running in which workspace. 
