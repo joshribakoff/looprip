@@ -17,7 +17,8 @@
     "clean": "rm -rf dist",
     "cli": "tsx src/cli/index.js",
     "interactive": "tsx src/cli/index.js interactive",
-    "prompt:create": "tsx src/cli/index.js prompt create"
+    "prompt:create": "tsx src/cli/index.js prompt create",
+    "agent": "tsx src/agentLoop.ts"
   },
   "keywords": [
     "agent",
@@ -36,7 +37,9 @@
     "js-yaml": "^4.1.0",
     "ora": "^8.0.1",
     "prompts": "^2.4.2",
-    "zod": "^3.22.4"
+    "zod": "^3.22.4",
+    "dotenv": "^16.4.5",
+    "openai": "^4.73.0"
   },
   "devDependencies": {
     "@types/js-yaml": "^4.0.9",

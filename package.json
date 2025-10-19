@@ -19,8 +19,12 @@
     "runtime:test": "npm -w runtime test",
     "runtime:lint": "npm -w runtime run lint",
     "interactive": "npm -w runtime run interactive",
+    "agent": "env-cmd -f ./.env npm --prefix runtime run agent",
     "run": "npm -w runtime run cli -- run",
     "validate": "npm -w runtime run cli -- validate",
     "prompt:create": "npm -w runtime run prompt:create"
+  },
+  "devDependencies": {
+    "env-cmd": "^10.1.0"
   }
 }
