@@ -1,5 +1,5 @@
 import React from 'react';
-import {Box, Text} from 'ink';
+import {Box, Text, useInput} from 'ink';
 import TextInput from 'ink-text-input';
 
 type PathInfo = { rel: string; abs: string; exists: boolean } | null;
@@ -11,11 +11,15 @@ type Props = {
   createPathInfo: PathInfo;
   onChange: (v: string) => void;
   onSubmit: (v: string) => void | Promise<void>;
+  onBack?: () => void;
 };
 
-export function CreatePromptScreen({ header, defaultPath, value, createPathInfo, onChange, onSubmit }: Props) {
+export function CreatePromptScreen({ header, defaultPath, value, createPathInfo, onChange, onSubmit, onBack }: Props) {
   const info = createPathInfo;
   const invalid = !!info?.exists;
+  useInput((input, key) => {
+    if (key.escape && onBack) onBack();
+  });
   return (
     <Box flexDirection="column">
       {header}

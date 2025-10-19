@@ -14,7 +14,10 @@
     "test:ui": "vitest --ui",
     "lint": "eslint src --ext .ts",
     "lint:prompts": "tsx src/cli/lint-prompts.ts",
-    "clean": "rm -rf dist"
+    "clean": "rm -rf dist",
+    "cli": "tsx src/cli/index.js",
+    "interactive": "tsx src/cli/index.js interactive",
+    "prompt:create": "tsx src/cli/index.js prompt create"
   },
   "keywords": [
     "agent",

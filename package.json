@@ -13,6 +13,14 @@
     "clean": "cd runtime && npm run clean",
     "lint": "(cd runtime && npm run lint:prompts && npm run lint)",
     "p": "./p",
-    "install:cli": "bash ./scripts/install.sh"
+    "install:cli": "bash ./scripts/install.sh",
+    "runtime:build": "npm -w runtime run build",
+    "runtime:dev": "npm -w runtime run dev",
+    "runtime:test": "npm -w runtime test",
+    "runtime:lint": "npm -w runtime run lint",
+    "interactive": "npm -w runtime run interactive",
+    "run": "npm -w runtime run cli -- run",
+    "validate": "npm -w runtime run cli -- validate",
+    "prompt:create": "npm -w runtime run prompt:create"
   }
 }

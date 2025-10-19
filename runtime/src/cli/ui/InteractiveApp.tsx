@@ -153,6 +153,7 @@ function AppInner() {
         value={customPath}
         createPathInfo={createPathInfo}
         onChange={(v: string) => dispatch(actions.setCustomPath(v))}
+        onBack={() => { dispatch(actions.setCustomPath('')); dispatch(actions.setMode('select')); }}
         onSubmit={async (val: string) => {
           const typed = (val.trim() || defaultPath);
           const normalized = ensureMd(typed);
@@ -178,6 +179,7 @@ function AppInner() {
         header={header}
         value={customPath}
         onChange={(v: string) => dispatch(actions.setCustomPath(v))}
+        onBack={() => { dispatch(actions.setMode('select')); dispatch(actions.setCustomPath('')); }}
         onSubmit={(val: string) => {
           const abs = path.resolve(cwd, val.trim());
           dispatch(actions.setCustomPath(''));
@@ -193,6 +195,7 @@ function AppInner() {
         header={header}
         value={userPrompt}
         onChange={(v: string) => dispatch(actions.setUserPrompt(v))}
+        onBack={() => { dispatch(actions.setMode('select')); dispatch(actions.setUserPrompt('')); }}
         onSubmit={() => onSubmitPrompt()}
       />
     );

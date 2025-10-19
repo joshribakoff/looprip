@@ -20,19 +20,24 @@ Examples live under `examples/`, docs source under `docs/`.
 
 ## How to build, run, and test
 
+- Never create VS Code tasks. Use npm scripts only.
+
 - Install CLI once from repo root:
   - `npm run install:cli`
 - Run a pipeline:
   - `p run examples/simple-task-test/pipeline.yaml`
 - Interactive mode (TTY only):
-  - `p` (no args) or `p interactive`
+  - `npm run interactive` (preferred script)
+  - or `p` (no args) / `p interactive`
 - Validate only:
-  - `p validate path/to/pipeline.yaml`
-- Dev loop in `runtime/`:
-  - `npm -w runtime run dev` (type-check watch)
-  - `npm -w runtime run build` (compile TypeScript)
-  - `npm -w runtime test` (Vitest)
-  - `npm -w runtime run lint`
+  - `npm run validate -- examples/simple-task-test/pipeline.yaml`
+- Prompt scaffolding:
+  - `npm run prompt:create -- my-new-prompt`
+- Dev loop in `runtime/` (via workspace scripts):
+  - `npm run runtime:dev` (type-check watch)
+  - `npm run runtime:build` (compile TypeScript)
+  - `npm run runtime:test` (Vitest)
+  - `npm run runtime:lint`
 
 Environment:
 - Set `ANTHROPIC_API_KEY` for agent nodes, or pass `--api-key` to `p run`.
@@ -122,3 +127,15 @@ When extending executors:
 - Docs site sources: `docs/` (Docusaurus)
 
 If you’re an AI co-pilot, keep changes minimal, link to upstream docs, and run tests before finishing.
+
+## npm scripts reference (no VS Code tasks)
+
+From repo root:
+
+- `npm run interactive` — launch interactive TUI.
+- `npm run run -- <pipeline>` — run a pipeline (passes through to `p run`).
+- `npm run validate -- <pipeline>` — validate a pipeline.
+- `npm run prompt:create -- [nameOrPath]` — create a Markdown prompt file.
+- `npm run runtime:build` / `runtime:dev` / `runtime:test` / `runtime:lint` — work on the runtime package.
+
+Do not add tasks.json or VS Code tasks; use these scripts for repeatable workflows.
