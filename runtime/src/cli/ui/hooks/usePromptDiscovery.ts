@@ -27,8 +27,9 @@ async function findPromptFiles(baseDir: string): Promise<Array<{ path: string; t
           results.push({ path: fullPath, title });
         }
       } catch (err) {
-        // Skip invalid prompts
-        console.warn(`[usePromptDiscovery] Skipping invalid prompt: ${entry.name}`, err);
+        // Include files without valid front matter - they'll still be listed
+        const title = entry.name.replace(/\.md$/, '');
+        results.push({ path: fullPath, title });
       }
     }
   }
