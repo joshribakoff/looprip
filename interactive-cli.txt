@@ -1,0 +1,3 @@
+There should be a way to run the command line in interactive mode where you can hit arrows up and down to select the subcommand (like `pipeline run`), and then it lists the pipelines and you can just pick the pipeline and press Enter. 
+
+If the current command-line library doesn't allow for this type of interactivity, feel free to switch or install new libraries. 
