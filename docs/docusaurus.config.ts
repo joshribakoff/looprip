@@ -5,8 +5,8 @@ import type * as Preset from '@docusaurus/preset-classic';
 // This runs in Node.js - Don't use client-side code here (browser APIs, JSX...)
 
 const config: Config = {
-  title: 'My Site',
-  tagline: 'Dinosaurs are cool',
+  title: 'Agentic Pipelines',
+  tagline: 'Safer, more controlled AI automation',
   favicon: 'img/favicon.ico',
 
   // Future flags, see https://docusaurus.io/docs/api/docusaurus-config#future
@@ -22,8 +22,8 @@ const config: Config = {
 
   // GitHub pages deployment config.
   // If you aren't using GitHub pages, you don't need these.
-  organizationName: 'facebook', // Usually your GitHub org/user name.
-  projectName: 'docusaurus', // Usually your repo name.
+  organizationName: 'your-org', // Usually your GitHub org/user name.
+  projectName: 'agent-thing', // Usually your repo name.
 
   onBrokenLinks: 'throw',
 
@@ -41,7 +41,7 @@ const config: Config = {
       {
         docs: {
           sidebarPath: './sidebars.ts',
-          routeBasePath: '/',
+          routeBasePath: '/docs',
         },
         blog: false,
         theme: {
@@ -58,18 +58,13 @@ const config: Config = {
       respectPrefersColorScheme: true,
     },
     navbar: {
-      title: 'My Site',
+      title: 'Agentic Pipelines',
       logo: {
-        alt: 'My Site Logo',
+        alt: 'Logo',
         src: 'img/logo.svg',
       },
       items: [
-        {
-          type: 'docSidebar',
-          sidebarId: 'tutorialSidebar',
-          position: 'left',
-          label: 'Docs',
-        },
+        { to: '/docs/intro', label: 'Docs', position: 'left' },
       ],
     },
     footer: {
@@ -79,8 +74,8 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Documentation',
-              to: '/',
+              label: 'Introduction',
+              to: '/docs/intro',
             },
           ],
         },
