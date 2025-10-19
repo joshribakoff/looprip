@@ -1,0 +1,9 @@
+name: Run Unit Tests
+description: Execute the runtime unit tests and verify they pass
+
+nodes:
+  - id: run-and-verify-tests
+    type: task
+    description: Run the vitest test suite (exits with code 1 if tests fail)
+    command: |
+      cd runtime && npm test -- --run
