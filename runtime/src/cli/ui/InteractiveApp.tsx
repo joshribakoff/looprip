@@ -5,12 +5,15 @@ import fs from 'fs/promises';
 import {PipelineParser} from '../../core/parser.js';
 import MainMenuScreen, { MAIN_MENU_CHOICES } from './screens/MainMenuScreen.js';
 import SelectScreen from './screens/SelectScreen.js';
+import SelectPromptScreen from './screens/SelectPromptScreen.js';
 import StatusScreen from './screens/StatusScreen.js';
 import CustomPathScreen from './screens/CustomPathScreen.js';
 import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
+import { usePromptDiscovery } from './hooks/usePromptDiscovery.js';
 import { usePipelineRunner } from './hooks/usePipelineRunner.js';
+import { usePromptRunner } from './hooks/usePromptRunner.js';
 import { UIProvider, useUiDispatch, useUiState, actions } from './state/uiStore.js';
 import { LoggerProvider, useInkLogger } from './logger/InkLogger.js';
 
@@ -30,17 +33,23 @@ function AppInner() {
   const {exit} = useApp();
   const cwd = process.cwd();
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
+  const { choices: promptChoices, refreshChoices: refreshPromptChoices } = usePromptDiscovery(cwd);
   const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset } = useUiState();
   const dispatch = useUiDispatch();
   const { logger } = useInkLogger();
   const { executePipeline } = usePipelineRunner(logger);
+  const { executePrompt } = usePromptRunner(logger);
   // Toast/notice shown when returning to the main menu
   const { notice } = useUiState();
 
   // Keep index in range when choices change
   useEffect(() => {
-    dispatch(actions.choicesChanged(choices.length));
-  }, [choices.length, dispatch]);
+    if (mode === 'select') {
+      dispatch(actions.choicesChanged(choices.length));
+    } else if (mode === 'select-prompt') {
+      dispatch(actions.choicesChanged(promptChoices.length));
+    }
+  }, [choices.length, promptChoices.length, mode, dispatch]);
 
   const handleMainMenuSelect = () => {
     const choice = MAIN_MENU_CHOICES[index];
@@ -49,6 +58,8 @@ function AppInner() {
       exit();
     } else if (choice.value === 'run-pipeline') {
       dispatch(actions.navigateToSelectPipeline());
+    } else if (choice.value === 'run-prompt') {
+      dispatch(actions.navigateToSelectPrompt());
     } else if (choice.value === 'create-prompt') {
       dispatch(actions.navigateToCreatePrompt());
     }
@@ -65,6 +76,12 @@ function AppInner() {
       else if (key.downArrow) dispatch(actions.navigateDown(choices.length - 1));
       else if (key.return) handleSelect();
       else if (input === 'r') void refreshChoices();
+      else if (input === 'q' || key.escape) dispatch(actions.navigateToMainMenu());
+    } else if (mode === 'select-prompt') {
+      if (key.upArrow) dispatch(actions.navigateUp());
+      else if (key.downArrow) dispatch(actions.navigateDown(promptChoices.length - 1));
+      else if (key.return) handlePromptSelect();
+      else if (input === 'r') void refreshPromptChoices();
       else if (input === 'q' || key.escape) dispatch(actions.navigateToMainMenu());
     } else if (mode === 'custom-path') {
       if (key.escape) dispatch(actions.returnFromScreen());
@@ -95,6 +112,12 @@ function AppInner() {
     await runPipeline(choice.value);
   };
 
+  const handlePromptSelect = async () => {
+    const choice = promptChoices[index];
+    if (!choice) return;
+    await runPrompt(choice.value);
+  };
+
   const runPipeline = async (selectedPath: string) => {
     const exists = await fs.stat(selectedPath).then((s) => s.isFile()).catch(() => false);
     if (!exists) {
@@ -115,6 +138,16 @@ function AppInner() {
       dispatch(actions.pipelineCompleted(success, success ? '✔ Pipeline completed' : '✖ Pipeline failed'));
     } catch (err: any) {
       dispatch(actions.pipelineFailed(err?.message || String(err)));
+    }
+  };
+
+  const runPrompt = async (selectedPath: string) => {
+    try {
+      dispatch(actions.promptExecutionStarted(selectedPath));
+      const { success } = await executePrompt(selectedPath);
+      dispatch(actions.promptExecutionCompleted(success, success ? '✔ Prompt executed successfully' : '✖ Prompt execution failed'));
+    } catch (err: any) {
+      dispatch(actions.promptExecutionFailed(err?.message || String(err)));
     }
   };
 
@@ -150,6 +183,12 @@ function AppInner() {
 
   if (mode === 'create-prompt') {
     return wrapInBorder(<CreatePromptScreen header={header} />);
+  }
+
+  if (mode === 'select-prompt') {
+    return wrapInBorder(
+      <SelectPromptScreen header={header} choices={promptChoices} index={index} notice={notice} />
+    );
   }
 
   if (mode === 'custom-path') {

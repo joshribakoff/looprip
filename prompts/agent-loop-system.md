@@ -22,3 +22,4 @@ Output must follow this schema exactly:
 - For "write_file", include "contents" with the full file text.
 - Return at most two actions.
 - If you need to read a file, request that before attempting a write.
+- This system is in development. If you feel like you are missing a tool, stop and print out that you are missing Eg. the ability to list files in the directory. 

@@ -11,6 +11,7 @@ type Props = {
 
 const MAIN_MENU_CHOICES: MainMenuChoice[] = [
   { title: 'Run a pipeline', value: 'run-pipeline' },
+  { title: 'Run a prompt', value: 'run-prompt' },
   { title: 'Create a prompt', value: 'create-prompt' },
   { title: 'Quit', value: 'quit' },
 ];

@@ -1,7 +1,7 @@
 import React, {createContext, useContext, useReducer} from 'react';
 
 // Shared UI mode across screens
-export type Mode = 'main-menu' | 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt';
+export type Mode = 'main-menu' | 'select' | 'custom-path' | 'enter-prompt' | 'running' | 'summary' | 'create-prompt' | 'select-prompt';
 
 export type Notice = { text: string; color?: 'green' | 'red' | 'yellow' } | null;
 
@@ -26,6 +26,7 @@ export type UIAction =
   | { type: 'NAVIGATE_DOWN'; maxIndex: number }
   | { type: 'NAVIGATE_TO_MAIN_MENU' }
   | { type: 'NAVIGATE_TO_SELECT_PIPELINE' }
+  | { type: 'NAVIGATE_TO_SELECT_PROMPT' }
   | { type: 'NAVIGATE_TO_CREATE_PROMPT' }
   | { type: 'NAVIGATE_TO_CUSTOM_PATH' }
   | { type: 'NAVIGATE_TO_ENTER_PROMPT'; pipelinePath: string }
@@ -43,6 +44,9 @@ export type UIAction =
   // Prompt events
   | { type: 'PROMPT_CREATED'; filePath: string; relativePath: string }
   | { type: 'PROMPT_SUBMITTED' }
+  | { type: 'PROMPT_EXECUTION_STARTED'; path: string }
+  | { type: 'PROMPT_EXECUTION_COMPLETED'; success: boolean; message: string }
+  | { type: 'PROMPT_EXECUTION_FAILED'; error: string }
   // System events
   | { type: 'CHOICES_CHANGED'; newLength: number }
   | { type: 'NOTICE_DISMISSED' };
@@ -73,6 +77,8 @@ function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, mode: 'main-menu', index: 0, notice: null, customPath: '', userPrompt: '' };
     case 'NAVIGATE_TO_SELECT_PIPELINE':
       return { ...state, mode: 'select', index: 0, notice: null };
+    case 'NAVIGATE_TO_SELECT_PROMPT':
+      return { ...state, mode: 'select-prompt', index: 0, notice: null };
     case 'NAVIGATE_TO_CREATE_PROMPT':
       return { ...state, mode: 'create-prompt', customPath: '' };
     case 'NAVIGATE_TO_CUSTOM_PATH':
@@ -107,6 +113,12 @@ function reducer(state: UIState, action: UIAction): UIState {
       return { ...state, mode: 'main-menu', index: 0, customPath: '', notice: { text: `Prompt created: ${action.relativePath} (also at ${action.filePath})`, color: 'green' } };
     case 'PROMPT_SUBMITTED':
       return { ...state, userPrompt: '' };
+    case 'PROMPT_EXECUTION_STARTED':
+      return { ...state, mode: 'running', status: 'loading', message: `Running prompt: ${action.path}` };
+    case 'PROMPT_EXECUTION_COMPLETED':
+      return { ...state, mode: 'summary', status: action.success ? 'success' : 'error', message: action.message, lastResultSuccess: action.success, scrollOffset: 0 };
+    case 'PROMPT_EXECUTION_FAILED':
+      return { ...state, mode: 'summary', status: 'error', message: action.error, lastResultSuccess: false };
     
     // System
     case 'CHOICES_CHANGED':
@@ -150,6 +162,7 @@ export const actions = {
   navigateDown: (maxIndex: number): UIAction => ({ type: 'NAVIGATE_DOWN', maxIndex }),
   navigateToMainMenu: (): UIAction => ({ type: 'NAVIGATE_TO_MAIN_MENU' }),
   navigateToSelectPipeline: (): UIAction => ({ type: 'NAVIGATE_TO_SELECT_PIPELINE' }),
+  navigateToSelectPrompt: (): UIAction => ({ type: 'NAVIGATE_TO_SELECT_PROMPT' }),
   navigateToCreatePrompt: (): UIAction => ({ type: 'NAVIGATE_TO_CREATE_PROMPT' }),
   navigateToCustomPath: (): UIAction => ({ type: 'NAVIGATE_TO_CUSTOM_PATH' }),
   navigateToEnterPrompt: (pipelinePath: string): UIAction => ({ type: 'NAVIGATE_TO_ENTER_PROMPT', pipelinePath }),
@@ -170,6 +183,9 @@ export const actions = {
   // Prompts
   promptCreated: (filePath: string, relativePath: string): UIAction => ({ type: 'PROMPT_CREATED', filePath, relativePath }),
   promptSubmitted: (): UIAction => ({ type: 'PROMPT_SUBMITTED' }),
+  promptExecutionStarted: (path: string): UIAction => ({ type: 'PROMPT_EXECUTION_STARTED', path }),
+  promptExecutionCompleted: (success: boolean, message: string): UIAction => ({ type: 'PROMPT_EXECUTION_COMPLETED', success, message }),
+  promptExecutionFailed: (error: string): UIAction => ({ type: 'PROMPT_EXECUTION_FAILED', error }),
   
   // System
   choicesChanged: (newLength: number): UIAction => ({ type: 'CHOICES_CHANGED', newLength }),

@@ -17,6 +17,8 @@ export const PromptCleanupSchema = z
 export const PromptFrontMatterSchema = z
   .object({
     status: z.enum(['draft', 'active', 'done', 'archived']).default('draft'),
+    provider: z.enum(['openai', 'anthropic']).optional().default('openai'),
+    model: z.string().optional(),
   })
   .strict();
 
