@@ -69,6 +69,7 @@ type ConversationEntry = {
 };
 
 async function callModel(provider: Provider, history: ConversationEntry[]): Promise<string> {
+    console.log('[agent] calling  model:', provider);
   if (provider === 'openai') {
     if (!config.openaiApiKey) {
       throw new Error('OPENAI_API_KEY is required for the OpenAI provider.');
@@ -80,11 +81,13 @@ async function callModel(provider: Provider, history: ConversationEntry[]): Prom
       ...history.map((entry) => ({ role: entry.role, content: entry.content })),
     ];
 
+    console.log(1,messages)
     const completion = await client.chat.completions.create({
-      model: config.openaiModel,
-      messages,
-      temperature: 0,
+        model: config.openaiModel,
+        messages,
+        temperature: 0,
     });
+    console.log(2)
 
     const choice = completion.choices?.[0]?.message?.content;
     if (!choice) {
