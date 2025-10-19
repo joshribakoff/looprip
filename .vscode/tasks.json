@@ -1,0 +1,23 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Build runtime TypeScript",
+			"type": "shell",
+			"command": "npm run -w runtime build",
+			"problemMatcher": [
+				"$tsc"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run runtime tests",
+			"type": "shell",
+			"command": "npm run -w runtime test --silent",
+			"problemMatcher": [
+				"$vitest"
+			],
+			"group": "test"
+		}
+	]
+}

@@ -27,6 +27,13 @@ p
 p interactive
 ```
 
+Interactive mode now stays open in a loop until you press Ctrl+C:
+
+- After each run, you're brought back to the pipeline picker.
+- Your last selection is preselected, so you can just press Enter to rerun it repeatedly.
+- If the pipeline requires a prompt, your last prompt text will be prefilled.
+- Press Ctrl+C at any time to exit.
+
 ## Develop
 
 ```bash

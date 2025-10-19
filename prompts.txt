@@ -1,0 +1,9 @@
+I'm adding a lot of prompts text files to the root of this repository, and it's getting out of hand. I think we could create a folder for organizing the prompts and start structuring them a little bit better. 
+
+And we could leverage the interactive command line to be able to select a prompt to assign it to a workspace or whatever. 
+
+The system could then be set up via the pipelines to clean up the prompt file when it's done or toggle status in a front matter. 
+
+To start with, we can move all the existing prompts into a prompt folder and structure them with an example front matter structure. 
+
+And then you could literally output additional prompts in there for implementing the additional features, like adding the prompting related features to the interactive command line mode. 
