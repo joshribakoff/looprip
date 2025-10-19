@@ -55,7 +55,7 @@ cd ..
 ./test.sh
 
 # Try an example
-node runtime/dist/cli/index.js run examples/simple-task-test/pipeline.yaml
+agent-pipeline run examples/simple-task-test/pipeline.yaml
 ```
 
 ## Test Results

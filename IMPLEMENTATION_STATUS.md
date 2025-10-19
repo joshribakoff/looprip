@@ -312,7 +312,7 @@ cd ..
 
 ### Execute a Pipeline
 ```bash
-node runtime/dist/cli/index.js run examples/simple-task-test/pipeline.yaml
+agent-pipeline run examples/simple-task-test/pipeline.yaml
 ```
 
 ### Validate a Pipeline

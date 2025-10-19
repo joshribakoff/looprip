@@ -15,7 +15,7 @@ From the root of the repository:
 cd runtime && npm run build && cd ..
 
 # Run the pipeline
-node runtime/dist/cli/index.js run examples/run-unit-tests/pipeline.yaml
+agent-pipeline run examples/run-unit-tests/pipeline.yaml
 ```
 
 ## Expected Behavior

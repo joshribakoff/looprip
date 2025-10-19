@@ -42,7 +42,9 @@ echo ""
 
 # Test 5: File tracking test
 echo "✓ Test 5: Testing file tracking..."
-node runtime/dist/cli/index.js run examples/file-tracking-test/pipeline.yaml > /dev/null 2>&1
+# Test file tracking
+echo "Testing file tracking..."
+agent-pipeline run examples/file-tracking-test/pipeline.yaml > /dev/null 2>&1
 rm -f test-file.txt
 echo "  File tracking working"
 echo ""
