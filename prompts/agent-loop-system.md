@@ -29,9 +29,6 @@ Output must follow this schema exactly:
   - `pattern` (optional glob such as `**/*.ts`)
   - `max_results` (optional limit, defaults to 200, maximum 1000)
 - `run_npm_script` arguments:
-  - `script`: one of `runtime:build`, `runtime:test`, `runtime:lint`
-  - `flags`: optional object with allowed keys per script
-    - For `runtime:test`: `watch` (boolean), `ui` (boolean), `run` (boolean), `filter` (string), `testNamePattern` (string), `file` (string path)
-    - For `runtime:lint`: `fix` (boolean)
-    - `runtime:build` does not accept flags
-  - Scripts run via `npm run <script>` with the provided flags and no other shell access.
+  - `script`: name of an npm script defined in this repository. The host may expose aliases or restrict the set that can run; attempting disallowed scripts will return an error.
+  - `flags`: optional object containing CLI flags. Boolean values toggle a `--flag` when true, while string values are passed as `--flag value`. Some scripts define custom positional arguments (for example a `file` path) that the host will accept explicitly.
+  - Scripts execute via `npm run <script>` with the provided flags. No other shell access is available.
