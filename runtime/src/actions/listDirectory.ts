@@ -72,7 +72,7 @@ function globToRegExp(pattern: string): RegExp {
       continue;
     }
 
-    if (/[\\.^$+{}()|\[\]]/.test(char)) {
+    if (/[\\.^$+{}()|[\]]/.test(char)) {
       regex += `\\${char}`;
     } else {
       regex += char;
