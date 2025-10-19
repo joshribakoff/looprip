@@ -84,8 +84,12 @@ export class PipelineParser {
       throw new Error(`Agent node "${node.id}" is missing required "tools" array`);
     }
 
-    if (!node.output_schema || typeof node.output_schema !== 'string') {
+    if (!node.output_schema) {
       throw new Error(`Agent node "${node.id}" is missing required "output_schema" field`);
+    }
+
+    if (typeof node.output_schema !== 'string' && typeof node.output_schema !== 'object') {
+      throw new Error(`Agent node "${node.id}" has invalid "output_schema" field: must be string or object`);
     }
 
     return {
