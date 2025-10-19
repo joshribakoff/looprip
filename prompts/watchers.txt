@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 I'd like to see a better example of the watcher mode. 
 
 There should be some declarative configuration file (should it be together or separate from the pipelines?)

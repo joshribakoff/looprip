@@ -1,3 +1,7 @@
+---
+status: draft
+---
+
 I'm adding a lot of prompts text files to the root of this repository, and it's getting out of hand. I think we could create a folder for organizing the prompts and start structuring them a little bit better. 
 
 And we could leverage the interactive command line to be able to select a prompt to assign it to a workspace or whatever. 
