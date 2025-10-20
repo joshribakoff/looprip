@@ -284,6 +284,62 @@ describe('runAgentLoop', () => {
     expect(logMessages.some((message) => message.includes('Loop finished'))).toBe(true);
   });
 
+  it('handles invalid JSON model responses by injecting parse_error and continuing', async () => {
+    const callModelCalls: { history: ConversationEntryClone[] }[] = [];
+    const historySnapshots: ConversationEntryClone[][] = [];
+    let callCount = 0;
+
+    const loggerStub = createLoggerStub();
+
+    const loop = createAgentLoop({
+      readFile: async () => ({ contents: 'ok', resolvedPath: '/abs/x' }),
+      writeFile: async () => '/abs/x',
+      listDirectory: async () => ({
+        resolvedPath: '/',
+        entries: [],
+        truncated: false,
+        pattern: undefined,
+        recursive: false,
+        limit: 200,
+      }),
+      runNpmScript: async () => ({
+        script: 'noop',
+        npmScript: 'noop',
+        command: 'npm',
+        args: [],
+        cwd: '/',
+        exitCode: 0,
+        signal: null,
+        timedOut: false,
+        stdout: '',
+        stderr: '',
+        stdoutTruncated: false,
+        stdoutOverflow: 0,
+        stderrTruncated: false,
+        stderrOverflow: 0,
+      }),
+      loadSystemPrompt: async () => 'system',
+      callModel: async () => {
+        // First call returns invalid JSON, second call returns a valid action to end loop
+        callCount += 1;
+        if (callCount === 1) {
+          return 'not json {"oops": '; // invalid JSON
+        }
+        return JSON.stringify([
+          { action: 'write_file', args: { path: 'out.txt', contents: 'data' } },
+        ]);
+      },
+      config: { provider: 'openai', maxIterations: 3, userPrompt: 'Please help' },
+      logger: loggerStub.logger,
+    });
+
+    await loop.runAgentLoop();
+
+    // Expect that an error was logged about invalid JSON
+    const errorLogs = loggerStub.byLevel('error').map((args) => args.map(String).join(' '));
+    expect(errorLogs.some((m) => m.includes('Invalid JSON from model'))).toBe(true);
+  });
+
   it('executes list_directory actions and keeps the loop running', async () => {
     const loop = createAgentLoop({
       readFile: async () => {

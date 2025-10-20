@@ -234,7 +234,23 @@ export function createAgentLoop(deps: AgentLoopDeps) {
       const rawReply = await callModelFn(loopConfig.provider, systemPrompt, history);
       history.push({ role: 'assistant', content: rawReply });
 
-      const actions = parseActionPayload(rawReply, logger);
+      let actions: AgentAction[] = [];
+      try {
+        actions = parseActionPayload(rawReply, logger);
+      } catch (err) {
+        const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+        logger.error('[agent] Invalid JSON from model. Will inject parse_error and continue.');
+        const observation = ['Observation: parse_error encountered.', `error: ${msg}`].join('\n');
+        const injection = `${observation}\nRespond with the next JSON action.`;
+        if (iteration + 1 < loopConfig.maxIterations) {
+          history.push({ role: 'user', content: injection });
+          // Continue to next iteration without executing any action
+          continue;
+        } else {
+          // Out of iterations; stop loop
+          break;
+        }
+      }
 
       let shouldContinue = false;
 

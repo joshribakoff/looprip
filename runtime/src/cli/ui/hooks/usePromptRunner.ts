@@ -240,7 +240,25 @@ export function usePromptRunner(logger: Logger, config?: PromptRunnerConfig) {
           logger.info(`Response preview: ${rawReply.slice(0, 200)}...`);
 
           // Parse and execute actions
-          const actions = parseActionPayload(rawReply);
+          let actions: AgentAction[] = [];
+          try {
+            actions = parseActionPayload(rawReply);
+          } catch (err) {
+            const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+            logger.error('[agent] Invalid JSON from model. Will inject parse_error and continue.');
+            const observation = ['Observation: parse_error encountered.', `error: ${msg}`].join(
+              '\n',
+            );
+            const injection = `${observation}\nRespond with the next JSON action.`;
+            if (iteration + 1 < maxIterations) {
+              history.push({ role: 'user', content: injection });
+              // Skip executing actions this iteration
+              continue;
+            } else {
+              logger.info(`Agent loop completed after ${iteration + 1} iteration(s)`);
+              break;
+            }
+          }
 
           let shouldContinue = false;
 
