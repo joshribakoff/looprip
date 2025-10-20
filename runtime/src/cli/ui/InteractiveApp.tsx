@@ -10,10 +10,12 @@ import StatusScreen from './screens/StatusScreen.js';
 import CustomPathScreen from './screens/CustomPathScreen.js';
 import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
+import JobListScreen from './screens/JobListScreen.js';
+import JobDetailScreen from './screens/JobDetailScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 import { usePromptDiscovery } from './hooks/usePromptDiscovery.js';
-import { usePipelineRunner } from './hooks/usePipelineRunner.js';
-import { usePromptRunner } from './hooks/usePromptRunner.js';
+// Removed unused pipeline/prompt runner hooks in favor of background job manager
+import { useJobManager } from './hooks/useJobManager.js';
 import { UIProvider, useUiDispatch, useUiState, actions } from './state/uiStore.js';
 import { LoggerProvider, useInkLogger } from './logger/InkLogger.js';
 
@@ -34,12 +36,21 @@ function AppInner() {
   const cwd = process.cwd();
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const { choices: promptChoices, refreshChoices: refreshPromptChoices } = usePromptDiscovery(cwd);
-  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset } =
-    useUiState();
+  const {
+    mode,
+    index,
+    customPath,
+    userPrompt,
+    message,
+    status,
+    lastResultSuccess,
+    scrollOffset,
+    jobs,
+    selectedJobId,
+  } = useUiState();
   const dispatch = useUiDispatch();
-  const { logger } = useInkLogger();
-  const { executePipeline } = usePipelineRunner(logger);
-  const { executePrompt } = usePromptRunner(logger);
+  const { logger: _logger } = useInkLogger();
+  const { queueJob, queuePrompt, resumeJob, getLogPaths } = useJobManager();
   // Toast/notice shown when returning to the main menu
   const { notice } = useUiState();
 
@@ -61,6 +72,8 @@ function AppInner() {
       dispatch(actions.navigateToSelectPipeline());
     } else if (choice.value === 'run-prompt') {
       dispatch(actions.navigateToSelectPrompt());
+    } else if (choice.value === 'view-jobs') {
+      dispatch(actions.navigateToJobList());
     } else if (choice.value === 'create-prompt') {
       dispatch(actions.navigateToCreatePrompt());
     }
@@ -84,6 +97,18 @@ function AppInner() {
       else if (key.return) handlePromptSelect();
       else if (input === 'r') void refreshPromptChoices();
       else if (input === 'q' || key.escape) dispatch(actions.navigateToMainMenu());
+    } else if (mode === 'job-list') {
+      if (key.upArrow) dispatch(actions.navigateUp());
+      else if (key.downArrow) dispatch(actions.navigateDown(jobs.length - 1));
+      else if (key.return) handleJobListSelect();
+      else if (key.escape) dispatch(actions.navigateToMainMenu());
+    } else if (mode === 'job-detail') {
+      if (key.upArrow) dispatch(actions.scrollUp());
+      else if (key.downArrow) dispatch(actions.scrollDown());
+      else if (input === 'f') dispatch(actions.toggleAutoFollow());
+      else if (input === 'r') handleResumeJob();
+      else if (input === 'n') handleStartFreshJob();
+      else if (key.escape) dispatch(actions.navigateToJobList());
     } else if (mode === 'custom-path') {
       if (key.escape) dispatch(actions.returnFromScreen());
     } else if (mode === 'enter-prompt') {
@@ -119,6 +144,42 @@ function AppInner() {
     await runPrompt(choice.value);
   };
 
+  const handleJobListSelect = () => {
+    const job = jobs[index];
+    if (!job) return;
+    dispatch(actions.navigateToJobDetail(job.run.id));
+  };
+
+  const handleResumeJob = async () => {
+    if (!selectedJobId) return;
+    const job = jobs.find((j) => j.run.id === selectedJobId);
+    if (!job) return;
+    if (job.run.status !== 'failed' && job.run.status !== 'interrupted') return;
+
+    try {
+      await resumeJob(selectedJobId);
+      // Job will be updated via the polling mechanism
+    } catch (err: any) {
+      // Could show an error notice
+      console.error('Failed to resume job:', err);
+    }
+  };
+
+  const handleStartFreshJob = async () => {
+    if (!selectedJobId) return;
+    const job = jobs.find((j) => j.run.id === selectedJobId);
+    if (!job) return;
+    if (job.run.status !== 'failed' && job.run.status !== 'interrupted') return;
+
+    try {
+      // Queue a new job with the same pipeline and prompt
+      await queueJob(job.run.pipelinePath, job.run.pipelineName, job.run.userPrompt);
+      dispatch(actions.navigateToJobList());
+    } catch (err: any) {
+      console.error('Failed to start fresh job:', err);
+    }
+  };
+
   const runPipeline = async (selectedPath: string) => {
     const exists = await fs
       .stat(selectedPath)
@@ -129,7 +190,6 @@ function AppInner() {
       return;
     }
     try {
-      dispatch(actions.pipelineLoadingStarted(selectedPath));
       const parser = new PipelineParser();
       const pipeline = await parser.loadFromFile(selectedPath);
       const needsPrompt = detectNeedsPrompt(pipeline);
@@ -137,17 +197,13 @@ function AppInner() {
         dispatch(actions.navigateToEnterPrompt(selectedPath));
         return;
       }
-      dispatch(actions.pipelineExecutionStarted());
-      const { success } = await executePipeline(pipeline, {
-        cwd,
-        userPrompt: userPrompt || undefined,
-      });
-      dispatch(
-        actions.pipelineCompleted(
-          success,
-          success ? '✔ Pipeline completed' : '✖ Pipeline failed',
-        ),
-      );
+
+      // Queue the job to run in the background
+      const pipelineName = pipeline.name || path.basename(selectedPath, '.yaml');
+      const runId = await queueJob(selectedPath, pipelineName, userPrompt || undefined);
+
+      // Navigate straight to the job detail with live logs; user can Esc to see the job list
+      dispatch(actions.navigateToJobDetail(runId));
     } catch (err: any) {
       dispatch(actions.pipelineFailed(err?.message || String(err)));
     }
@@ -155,14 +211,11 @@ function AppInner() {
 
   const runPrompt = async (selectedPath: string) => {
     try {
-      dispatch(actions.promptExecutionStarted(selectedPath));
-      const { success } = await executePrompt(selectedPath);
-      dispatch(
-        actions.promptExecutionCompleted(
-          success,
-          success ? '✔ Prompt executed successfully' : '✖ Prompt execution failed',
-        ),
-      );
+      // Queue prompt as a background job and navigate to job list
+      const promptName = path.basename(selectedPath);
+      const runId = await queuePrompt(selectedPath, promptName);
+      // Go to the job detail to show live logs immediately
+      dispatch(actions.navigateToJobDetail(runId));
     } catch (err: any) {
       dispatch(actions.promptExecutionFailed(err?.message || String(err)));
     }
@@ -242,6 +295,33 @@ function AppInner() {
         message={message}
         lastResultSuccess={lastResultSuccess}
         scrollOffset={scrollOffset}
+      />,
+    );
+  }
+
+  if (mode === 'job-list') {
+    return wrapInBorder(<JobListScreen header={header} jobs={jobs} index={index} />);
+  }
+
+  if (mode === 'job-detail') {
+    const job = jobs.find((j) => j.run.id === selectedJobId);
+    if (!job) {
+      return wrapInBorder(
+        <Box flexDirection="column">
+          {header}
+          <Box marginTop={1}>
+            <Text color="red">Job not found</Text>
+          </Box>
+        </Box>,
+      );
+    }
+    const logPaths = getLogPaths(job.run.id);
+    return wrapInBorder(
+      <JobDetailScreen
+        header={header}
+        job={job}
+        scrollOffset={scrollOffset}
+        logFilePaths={logPaths}
       />,
     );
   }

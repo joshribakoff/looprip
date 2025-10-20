@@ -1,2 +1,3 @@
 .env
+.pipeline-runs
 node_modules

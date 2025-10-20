@@ -24,6 +24,8 @@ describe('uiStore', () => {
         lastResultSuccess: null,
         notice: null,
         scrollOffset: 0,
+        jobs: [],
+        selectedJobId: null,
       });
     });
   });
