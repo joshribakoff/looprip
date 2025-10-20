@@ -15,6 +15,8 @@ Incremental migration target for our documentation site using Astro.
 - `src/content/docs/` — Starlight docs content
 - `src/content/config.ts` — Content collections schema
 - `public/img/logo.svg` — Header logo
+- `src/content/blog/` — Blog posts (Markdown)
+- `src/pages/blog/` — Blog list and post routes
 
 ## Add or migrate pages
 
@@ -31,3 +33,19 @@ Incremental migration target for our documentation site using Astro.
 3. Add the page to the sidebar by editing `astro.config.ts` `starlight().sidebar` array.
 4. Use relative links between pages, e.g. `[Intro](./intro/)`.
    Content lives under `src/` and static assets under `public/`.
+
+## Add or migrate blog posts
+
+1. Create a Markdown file in `src/content/blog/` with frontmatter:
+
+   ***
+
+   title: My Post Title
+   pubDate: 2025-10-19
+   author: Your Name
+   authorImage: /img/team-avatar.svg
+   tags: [tag1, tag2]
+
+   ***
+
+2. Visit `/blog/` to see the listing and click through to the post.
