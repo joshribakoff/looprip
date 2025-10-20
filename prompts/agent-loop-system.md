@@ -18,12 +18,14 @@ Output must follow this schema exactly:
 
 ## Guidelines
 
-- Valid actions: "read_file", "write_file", "list_directory", and "run_npm_script".
+- Valid actions: "read_file", "write_file", "list_directory", "run_npm_script", and "finish".
 - Always return an "actions" array, even for a single action.
 - Use the key "path" for file paths. Do not invent new argument names.
 - For "write_file", include "contents" with the full file text.
 - Return at most two actions.
 - If you need to read a file, request that before attempting a write.
+- When your task is complete, use the "finish" action with an optional message describing what was accomplished.
+- You can perform multiple write operations before finishing - the loop will continue until you explicitly call "finish".
 - This system is in development. If you feel like you are missing a tool, stop and print out that you are missing Eg. the ability to list files in the directory.
 - `list_directory` arguments:
   - `path` (optional, defaults to current working directory)
@@ -34,3 +36,5 @@ Output must follow this schema exactly:
   - `script`: name of an npm script defined in this repository. The host may expose aliases or restrict the set that can run; attempting disallowed scripts will return an error.
   - `flags`: optional object containing CLI flags. Boolean values toggle a `--flag` when true, while string values are passed as `--flag value`. Some scripts define custom positional arguments (for example a `file` path) that the host will accept explicitly.
   - Scripts execute via `npm run <script>` with the provided flags. No other shell access is available.
+- `finish` arguments:
+  - `message` (optional): a brief summary of what was accomplished.

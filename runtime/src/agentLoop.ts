@@ -144,6 +144,16 @@ export function createAgentLoop(deps: AgentLoopDeps) {
           const observation = `Observation: write_file succeeded at ${resolvedPath}.`;
           return {
             observation,
+            continueLoop: true,
+            historyInjection: `${observation}\nRespond with the next JSON action.`,
+          };
+        }
+
+        case 'finish': {
+          const message = action.args.message ?? 'Task completed';
+          const observation = `Observation: finish acknowledged. ${message}`;
+          return {
+            observation,
             continueLoop: false,
             historyInjection: undefined,
           };

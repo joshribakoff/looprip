@@ -157,7 +157,7 @@ describe('createAgentLoop helpers', () => {
     expect(result.observation).toContain('...[truncated 5 characters]');
   });
 
-  it('executes write_file actions and stops the loop', async () => {
+  it('executes write_file actions and continues the loop', async () => {
     const writeCalls: { path: string; contents: string }[] = [];
     const loop = createAgentLoop({
       readFile: async () => {
@@ -186,8 +186,40 @@ describe('createAgentLoop helpers', () => {
     const result = await loop.executeAction(action);
 
     expect(writeCalls).toEqual([{ path: 'out.txt', contents: 'data' }]);
+    expect(result.continueLoop).toBe(true);
+    expect(result.historyInjection).toContain('Respond with the next JSON action.');
+  });
+
+  it('executes finish action and stops the loop', async () => {
+    const loop = createAgentLoop({
+      readFile: async () => {
+        throw new Error('readFile should not be called');
+      },
+      writeFile: async () => {
+        throw new Error('writeFile should not be called');
+      },
+      listDirectory: async () => {
+        throw new Error('listDirectory should not be called');
+      },
+      runNpmScript: async () => {
+        throw new Error('runNpmScript should not be called');
+      },
+      loadSystemPrompt: async () => 'system',
+      callModel: async () => 'never used',
+      config: { provider: 'openai', maxIterations: 1, userPrompt: 'prompt' },
+      logger: console,
+    });
+
+    const action: AgentAction = {
+      action: 'finish',
+      args: { message: 'All tasks completed successfully' },
+    };
+    const result = await loop.executeAction(action);
+
     expect(result.continueLoop).toBe(false);
     expect(result.historyInjection).toBeUndefined();
+    expect(result.observation).toContain('finish acknowledged');
+    expect(result.observation).toContain('All tasks completed successfully');
   });
 
   it('catches tool errors and surfaces observation without crashing', async () => {
@@ -264,10 +296,15 @@ describe('runAgentLoop', () => {
           })) as ConversationEntryClone[],
         });
 
-        return JSON.stringify([
-          { action: 'read_file', args: { path: 'note.txt' } },
-          { action: 'write_file', args: { path: 'note.txt', contents: 'updated' } },
-        ]);
+        // First call: read and write
+        if (callModelCalls.length === 1) {
+          return JSON.stringify([
+            { action: 'read_file', args: { path: 'note.txt' } },
+            { action: 'write_file', args: { path: 'note.txt', contents: 'updated' } },
+          ]);
+        }
+        // Second call: finish
+        return JSON.stringify([{ action: 'finish', args: { message: 'Done' } }]);
       },
       config: { provider: 'openai', maxIterations: 3, userPrompt: 'Please help' },
       logger: loggerStub.logger,
@@ -275,7 +312,7 @@ describe('runAgentLoop', () => {
 
     await loop.runAgentLoop();
 
-    expect(callModelCalls).toHaveLength(1);
+    expect(callModelCalls).toHaveLength(2);
     expect(callModelCalls[0]).toMatchObject({ provider: 'openai', systemPrompt: 'System Prompt' });
     expect(callModelCalls[0].history).toEqual([{ role: 'user', content: 'Please help' }]);
     expect(readCalls).toEqual(['note.txt']);

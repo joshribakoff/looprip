@@ -10,6 +10,7 @@ export const agentActionNames = [
   'write_file',
   'list_directory',
   'run_npm_script',
+  'finish',
 ] as const;
 
 export type AgentActionName = (typeof agentActionNames)[number];
@@ -31,13 +32,18 @@ export const agentActionSchema = z.discriminatedUnion('action', [
     action: z.literal('run_npm_script'),
     args: runNpmScriptArgsSchema,
   }),
+  z.object({
+    action: z.literal('finish'),
+    args: z.object({ message: z.string().optional() }),
+  }),
 ]);
 
 export type AgentAction =
   | { action: 'read_file'; args: ReadFileArgs }
   | { action: 'write_file'; args: WriteFileArgs }
   | { action: 'list_directory'; args: ListDirectoryArgs }
-  | { action: 'run_npm_script'; args: RunNpmScriptArgs };
+  | { action: 'run_npm_script'; args: RunNpmScriptArgs }
+  | { action: 'finish'; args: { message?: string } };
 
 export const agentActionNameSet = new Set<AgentActionName>(agentActionNames);
 

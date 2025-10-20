@@ -22,9 +22,12 @@ const anthropicApiKey = process.env.ANTHROPIC_API_KEY;
 const anthropicModel = process.env.ANTHROPIC_MODEL ?? 'claude-3-5-sonnet-20241022';
 
 const maxIterations = Number.parseInt(process.env.AGENT_MAX_ITERATIONS ?? '2', 10);
-const safeMaxIterations = Number.isNaN(maxIterations) ? 2 : Math.max(1, Math.min(maxIterations, 5));
+const safeMaxIterations = Number.isNaN(maxIterations)
+  ? 2
+  : Math.max(1, Math.min(maxIterations, 20));
 
-const userPrompt = process.env.AGENT_USER_PROMPT ?? 'Refactor utils.ts to use async/await where possible.';
+const userPrompt =
+  process.env.AGENT_USER_PROMPT ?? 'Refactor utils.ts to use async/await where possible.';
 
 export const config: AgentRuntimeConfig = {
   provider,
