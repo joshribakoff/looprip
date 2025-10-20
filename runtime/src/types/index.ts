@@ -4,3 +4,4 @@
 
 export * from './pipeline.js';
 export * from './schema.js';
+export * from './run.js';

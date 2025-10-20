@@ -5,6 +5,7 @@ import { useUiDispatch, useUiState, actions } from '../state/uiStore.js';
 import { useInkLogger } from '../logger/InkLogger.js';
 import { usePipelineRunner } from '../hooks/usePipelineRunner.js';
 import { usePromptRunner } from '../hooks/usePromptRunner.js';
+import { useJobManager } from '../hooks/useJobManager.js';
 
 function detectNeedsPrompt(pipeline: any): boolean {
   const containsPromptVar = (val: any): boolean => {
@@ -24,6 +25,7 @@ export function useUiController() {
   const { logger } = useInkLogger();
   const { executePipeline } = usePipelineRunner(logger);
   const { executePrompt } = usePromptRunner(logger);
+  const { getLogPaths } = useJobManager();
 
   async function ensurePathExists(filePath: string): Promise<boolean> {
     return fs
@@ -73,6 +75,9 @@ export function useUiController() {
         return;
       case 'run-prompt':
         dispatch(actions.navigateToSelectPrompt());
+        return;
+      case 'view-jobs':
+        dispatch(actions.navigateToJobList());
         return;
       case 'create-prompt':
         dispatch(actions.navigateToCreatePrompt());
@@ -134,6 +139,7 @@ export function useUiController() {
     goToCreatePrompt: () => dispatch(actions.navigateToCreatePrompt()),
     goToMainMenu: () => dispatch(actions.navigateToMainMenu()),
     quit: () => exit(),
+    getLogPaths,
   } as const;
 }
 

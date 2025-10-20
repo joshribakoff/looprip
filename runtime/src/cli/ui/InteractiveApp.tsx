@@ -8,6 +8,8 @@ import StatusScreen from './screens/StatusScreen.js';
 import CustomPathScreen from './screens/CustomPathScreen.js';
 import EnterPromptScreen from './screens/EnterPromptScreen.js';
 import CreatePromptScreen from './screens/CreatePromptScreen.js';
+import JobListScreen from './screens/JobListScreen.js';
+import JobDetailScreen from './screens/JobDetailScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 import { usePromptDiscovery } from './hooks/usePromptDiscovery.js';
 import { UIProvider, useUiState } from './state/uiStore.js';
@@ -18,10 +20,9 @@ function AppInner() {
   const cwd = process.cwd();
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const { choices: promptChoices, refreshChoices: refreshPromptChoices } = usePromptDiscovery(cwd);
-  const { mode, status, message, lastResultSuccess } = useUiState();
-  const { onMainMenuSelect, onCustomPathSubmitted, onEnterPromptSubmitted, onPromptSelected, onBack, goToCustomPath, goToCreatePrompt, onPipelineSelected, goToMainMenu, quit } =
+  const { mode, status, message, lastResultSuccess, notice, jobs, index, selectedJobId, scrollOffset } = useUiState();
+  const { onMainMenuSelect, onCustomPathSubmitted, onEnterPromptSubmitted, onPromptSelected, onBack, goToCustomPath, goToCreatePrompt, onPipelineSelected, goToMainMenu, quit, getLogPaths } =
     useUiController();
-  const { notice } = useUiState();
 
   const header = (
     <Box>
@@ -95,6 +96,33 @@ function AppInner() {
         lastResultSuccess={lastResultSuccess}
         onBackToMenu={() => goToMainMenu()}
         onQuit={() => quit()}
+      />,
+    );
+  }
+
+  if (mode === 'job-list') {
+    return wrapInBorder(<JobListScreen header={header} jobs={jobs} index={index} />);
+  }
+
+  if (mode === 'job-detail') {
+    const job = jobs.find((j) => j.run.id === selectedJobId);
+    if (!job) {
+      return wrapInBorder(
+        <Box flexDirection="column">
+          {header}
+          <Box marginTop={1}>
+            <Text color="red">Job not found</Text>
+          </Box>
+        </Box>,
+      );
+    }
+    const logPaths = getLogPaths(job.run.id);
+    return wrapInBorder(
+      <JobDetailScreen
+        header={header}
+        job={job}
+        scrollOffset={scrollOffset}
+        logFilePaths={logPaths}
       />,
     );
   }

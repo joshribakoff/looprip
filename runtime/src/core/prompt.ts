@@ -3,9 +3,11 @@
  */
 
 import { z } from 'zod';
-import fs from 'node:fs/promises';
+import fsNode from 'node:fs/promises';
 import path from 'node:path';
 import yaml from 'js-yaml';
+import type { FileSystem } from '../fs/types.js';
+import { NodeFileSystem } from '../fs/nodeFs.js';
 
 export const PromptCleanupSchema = z
   .object({
@@ -67,8 +69,9 @@ export function parsePromptString(input: string, filePath?: string): ParsedPromp
 /**
  * Read and parse a prompt Markdown file from disk.
  */
-export async function parsePromptFile(filePath: string): Promise<ParsedPrompt> {
-  const content = await fs.readFile(filePath, 'utf8');
+export async function parsePromptFile(filePath: string, fs?: FileSystem): Promise<ParsedPrompt> {
+  const reader = fs ?? new NodeFileSystem();
+  const content = fs ? await reader.readFile(filePath, 'utf8') : await fsNode.readFile(filePath, 'utf8');
   return parsePromptString(content, path.resolve(filePath));
 }
 

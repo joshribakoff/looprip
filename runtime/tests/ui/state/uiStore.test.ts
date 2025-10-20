@@ -21,6 +21,12 @@ describe('uiStore', () => {
         lastResultSuccess: null,
         notice: null,
         pendingPipelinePath: undefined,
+        scrollOffset: 0,
+        jobs: [],
+        selectedJobId: null,
+        index: 0,
+        customPath: '',
+        userPrompt: '',
       });
     });
   });

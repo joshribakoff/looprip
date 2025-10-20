@@ -1,6 +1,7 @@
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import type { FsActionOptions } from '../fs/types.js';
+import { NodeFileSystem } from '../fs/nodeFs.js';
 
 export const readFileArgsSchema = z
   .object({
@@ -14,10 +15,10 @@ export const readFileArgsSchema = z
 
 export type ReadFileArgs = z.infer<typeof readFileArgsSchema>;
 
-export async function readFileAction(
-  targetPath: string,
-): Promise<{ contents: string; resolvedPath: string }> {
-  const resolvedPath = path.resolve(process.cwd(), targetPath);
+export async function readFileAction(targetPath: string, options: FsActionOptions = {}): Promise<{ contents: string; resolvedPath: string }> {
+  const fs = options.fs ?? new NodeFileSystem();
+  const cwd = options.cwd ?? process.cwd();
+  const resolvedPath = path.resolve(cwd, targetPath);
   try {
     const contents = await fs.readFile(resolvedPath, 'utf8');
     return { contents, resolvedPath };
