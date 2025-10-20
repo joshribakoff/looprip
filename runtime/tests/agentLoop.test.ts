@@ -84,7 +84,9 @@ describe('normalizeActionsPayload', () => {
   });
 
   it('throws on unsupported shapes', () => {
-    expect(() => normalizeActionsPayload({ hello: 'world' })).toThrow('Unsupported agent response shape.');
+    expect(() => normalizeActionsPayload({ hello: 'world' })).toThrow(
+      'Unsupported agent response shape.',
+    );
   });
 });
 
@@ -177,12 +179,48 @@ describe('createAgentLoop helpers', () => {
       logger: console,
     });
 
-    const action: AgentAction = { action: 'write_file', args: { path: 'out.txt', contents: 'data' } };
+    const action: AgentAction = {
+      action: 'write_file',
+      args: { path: 'out.txt', contents: 'data' },
+    };
     const result = await loop.executeAction(action);
 
     expect(writeCalls).toEqual([{ path: 'out.txt', contents: 'data' }]);
     expect(result.continueLoop).toBe(false);
     expect(result.historyInjection).toBeUndefined();
+  });
+
+  it('catches tool errors and surfaces observation without crashing', async () => {
+    const loggerStub = createLoggerStub();
+    const loop = createAgentLoop({
+      readFile: async () => {
+        throw new Error("ENOENT: no such file or directory, open '/abs/missing.txt'");
+      },
+      writeFile: async () => {
+        throw new Error('writeFile should not be called');
+      },
+      listDirectory: async () => {
+        throw new Error('listDirectory should not be called');
+      },
+      runNpmScript: async () => {
+        throw new Error('runNpmScript should not be called');
+      },
+      loadSystemPrompt: async () => 'system',
+      callModel: async () => 'never used',
+      config: { provider: 'openai', maxIterations: 1, userPrompt: 'prompt' },
+      logger: loggerStub.logger,
+    });
+
+    const action: AgentAction = { action: 'read_file', args: { path: 'missing.txt' } };
+    const result = await loop.executeAction(action);
+
+    expect(result.continueLoop).toBe(true);
+    expect(result.observation).toContain('tool_error encountered');
+    expect(result.observation).toContain('action: read_file');
+    expect(result.observation).toContain('ENOENT');
+
+    // Ensure an error log was emitted
+    expect(loggerStub.byLevel('error').length).toBeGreaterThan(0);
   });
 });
 
@@ -192,7 +230,11 @@ describe('runAgentLoop', () => {
   it('runs the loop with injected dependencies', async () => {
     const readCalls: string[] = [];
     const writeCalls: { path: string; contents: string }[] = [];
-    const callModelCalls: { provider: string; systemPrompt: string; history: ConversationEntryClone[] }[] = [];
+    const callModelCalls: {
+      provider: string;
+      systemPrompt: string;
+      history: ConversationEntryClone[];
+    }[] = [];
 
     const loggerStub = createLoggerStub();
 
@@ -216,7 +258,10 @@ describe('runAgentLoop', () => {
         callModelCalls.push({
           provider,
           systemPrompt,
-          history: history.map((entry) => ({ role: entry.role, content: entry.content })) as ConversationEntryClone[],
+          history: history.map((entry) => ({
+            role: entry.role,
+            content: entry.content,
+          })) as ConversationEntryClone[],
         });
 
         return JSON.stringify([
@@ -267,7 +312,10 @@ describe('runAgentLoop', () => {
       logger: console,
     });
 
-    const action: AgentAction = { action: 'list_directory', args: { path: '.', recursive: false, pattern: undefined, maxResults: 200 } };
+    const action: AgentAction = {
+      action: 'list_directory',
+      args: { path: '.', recursive: false, pattern: undefined, maxResults: 200 },
+    };
     const result = await loop.executeAction(action);
 
     expect(result.continueLoop).toBe(true);
@@ -308,7 +356,10 @@ describe('runAgentLoop', () => {
       logger: console,
     });
 
-    const action: AgentAction = { action: 'run_npm_script', args: { script: 'runtime:test', flags: { run: true } } };
+    const action: AgentAction = {
+      action: 'run_npm_script',
+      args: { script: 'runtime:test', flags: { run: true } },
+    };
     const result = await loop.executeAction(action);
 
     expect(result.continueLoop).toBe(true);
