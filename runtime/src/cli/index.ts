@@ -9,6 +9,8 @@ import { resolve } from 'path';
 import { PipelineParser } from '../core/parser.js';
 import { PipelineExecutor } from '../executors/index.js';
 import { Logger } from '../utils/logger.js';
+import { RunManager } from '../utils/runManager.js';
+import { RunLogger } from '../utils/runLogger.js';
 import { bold, dim, gray, green, red, yellow } from '../utils/terminalStyles.js';
 import path from 'path';
 import { render } from 'ink';
@@ -29,11 +31,33 @@ program
   .option('--dry-run', 'Validate pipeline without executing', false)
   .option('--api-key <key>', 'Anthropic API key (or set ANTHROPIC_API_KEY env var)')
   .action(async (pipelinePath: string, options: any) => {
-    const logger = new Logger(options.verbose);
+    const absolutePath = resolve(process.cwd(), pipelinePath);
+
+    // For dry-run, use simple logger without RunManager
+    if (options.dryRun) {
+      const logger = new Logger(options.verbose);
+      logger.loading(`Loading pipeline: ${absolutePath}`);
+
+      const parser = new PipelineParser();
+      const pipeline = await parser.loadFromFile(absolutePath);
+
+      logger.info('Pipeline validated successfully');
+      logger.dryRun();
+      console.log(bold('Pipeline Structure:'));
+      logger.validationInfo('Name', pipeline.name || 'Unnamed');
+      logger.validationInfo('Nodes', pipeline.nodes.length.toString());
+      for (const node of pipeline.nodes) {
+        console.log(dim(`  • ${node.id}`) + gray(` (${node.type})`));
+      }
+      return;
+    }
+
+    // For actual execution, use RunManager and RunLogger
+    const runManager = new RunManager();
+    let runId: string | undefined;
+    let logger: Logger = new Logger(options.verbose);
 
     try {
-      const absolutePath = resolve(process.cwd(), pipelinePath);
-
       logger.loading(`Loading pipeline: ${absolutePath}`);
 
       const parser = new PipelineParser();
@@ -41,16 +65,19 @@ program
 
       logger.info('Pipeline validated successfully');
 
-      if (options.dryRun) {
-        logger.dryRun();
-        console.log(bold('Pipeline Structure:'));
-        logger.validationInfo('Name', pipeline.name || 'Unnamed');
-        logger.validationInfo('Nodes', pipeline.nodes.length.toString());
-        for (const node of pipeline.nodes) {
-          console.log(dim(`  • ${node.id}`) + gray(` (${node.type})`));
-        }
-        return;
-      }
+      // Create a run and use RunLogger
+      const run = await runManager.createRun(
+        absolutePath,
+        pipeline.name || 'Unnamed Pipeline',
+        options.prompt,
+      );
+      runId = run.id;
+      logger = new RunLogger(runId, runManager, options.verbose);
+
+      console.log(gray(`Run ID: ${runId}`));
+      console.log(gray(`Logs: ${runManager.getPlainLogsPath(runId)}`));
+
+      await runManager.updateRunStatus(runId, 'running');
 
       const executor = new PipelineExecutor(options.apiKey, logger);
       const context = {
@@ -62,13 +89,26 @@ program
 
       const result = await executor.execute(pipeline, context);
 
+      // Flush logger to ensure all logs are written
+      if (logger instanceof RunLogger) {
+        await logger.flush();
+      }
+
       if (result.success) {
+        await runManager.updateRunStatus(runId, 'completed');
         process.exit(0);
       } else {
+        await runManager.updateRunStatus(runId, 'failed', 'Pipeline execution failed');
         process.exit(1);
       }
     } catch (error: any) {
       logger.error(error.message, error.stack);
+      if (runId) {
+        await runManager.updateRunStatus(runId, 'failed', error.message);
+        if (logger instanceof RunLogger) {
+          await logger.flush();
+        }
+      }
       process.exit(1);
     }
   });
