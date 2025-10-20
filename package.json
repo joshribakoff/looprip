@@ -18,7 +18,7 @@
     "install:cli": "bash ./scripts/install.sh",
     "runtime:build": "npm --prefix runtime run build",
     "runtime:dev": "npm --prefix runtime run dev",
-    "runtime:test": "npm --prefix runtime test",
+    "runtime:test": "npm --prefix runtime run test:unit",
     "runtime:lint": "npm --prefix runtime run lint",
     "interactive": "npm --prefix runtime run interactive",
     "agent": "env-cmd -f ./.env npm --prefix runtime run agent",
