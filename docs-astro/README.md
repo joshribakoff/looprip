@@ -4,8 +4,30 @@ Incremental migration target for our documentation site using Astro.
 
 ## Useful commands
 
-- npm run dev — start dev server
-- npm run build — build static site to `dist`
-- npm run preview — preview built site
+## Run locally
 
-Content lives under `src/` and static assets under `public/`.
+- Dev: `npm run dev`
+- Build: `npm run build`
+- Preview: `npm run preview`
+
+## Structure
+
+- `src/content/docs/` — Starlight docs content
+- `src/content/config.ts` — Content collections schema
+- `public/img/logo.svg` — Header logo
+
+## Add or migrate pages
+
+1. Create a new Markdown file under `src/content/docs/`, for example `getting-started.md`.
+2. Add minimal frontmatter:
+
+   ***
+
+   title: Getting Started
+   description: Optional short summary.
+
+   ***
+
+3. Add the page to the sidebar by editing `astro.config.ts` `starlight().sidebar` array.
+4. Use relative links between pages, e.g. `[Intro](./intro/)`.
+   Content lives under `src/` and static assets under `public/`.
