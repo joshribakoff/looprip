@@ -8,7 +8,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '../../..');
 const examplesDir = join(rootDir, 'examples');
-const cliPath = join(rootDir, 'runtime/dist/cli/index.js');
+const cliPath = join(rootDir, 'runtime/src/cli/index.ts');
 
 /**
  * Find all pipeline.yaml files in the examples directory
@@ -44,7 +44,7 @@ describe('Pipeline Validation', () => {
     pipelines.forEach(({ name, path }) => {
       it(`should validate ${name}`, () => {
         expect(() => {
-          execSync(`node ${cliPath} validate ${path}`, {
+          execSync(`npx tsx ${cliPath} validate ${path}`, {
             cwd: rootDir,
             encoding: 'utf-8',
             stdio: 'pipe',

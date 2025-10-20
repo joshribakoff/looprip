@@ -7,7 +7,7 @@ import { fileURLToPath } from 'url';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const rootDir = join(__dirname, '../../..');
-const cliPath = join(rootDir, 'runtime/dist/cli/index.js');
+const cliPath = join(rootDir, 'runtime/src/cli/index.ts');
 
 describe('Pipeline Execution', () => {
   describe('simple-task-test', () => {
@@ -15,7 +15,7 @@ describe('Pipeline Execution', () => {
       const pipelinePath = join(rootDir, 'examples/simple-task-test/pipeline.yaml');
 
       expect(() => {
-        execSync(`node ${cliPath} run ${pipelinePath}`, {
+        execSync(`npx tsx ${cliPath} run ${pipelinePath}`, {
           cwd: rootDir,
           encoding: 'utf-8',
           stdio: 'pipe',
@@ -38,7 +38,7 @@ describe('Pipeline Execution', () => {
       const pipelinePath = join(rootDir, 'examples/file-tracking-test/pipeline.yaml');
 
       expect(() => {
-        execSync(`node ${cliPath} run ${pipelinePath}`, {
+        execSync(`npx tsx ${cliPath} run ${pipelinePath}`, {
           cwd: rootDir,
           encoding: 'utf-8',
           stdio: 'pipe',
@@ -52,7 +52,7 @@ describe('Pipeline Execution', () => {
       const pipelinePath = join(rootDir, 'examples/gate-test/pipeline.yaml');
 
       expect(() => {
-        execSync(`node ${cliPath} run ${pipelinePath}`, {
+        execSync(`npx tsx ${cliPath} run ${pipelinePath}`, {
           cwd: rootDir,
           encoding: 'utf-8',
           stdio: 'pipe',
@@ -75,7 +75,7 @@ describe('Pipeline Execution', () => {
       const pipelinePath = join(rootDir, 'examples/gate-failure-test/pipeline.yaml');
 
       expect(() => {
-        execSync(`node ${cliPath} run ${pipelinePath}`, {
+        execSync(`npx tsx ${cliPath} run ${pipelinePath}`, {
           cwd: rootDir,
           encoding: 'utf-8',
           stdio: 'pipe',
