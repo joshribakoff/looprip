@@ -1,20 +1,11 @@
-import { beforeEach, afterEach, describe, it, expect, vi } from 'vitest';
-import os from 'os';
-import fs from 'fs/promises';
+import { describe, it, expect } from 'vitest';
 import path from 'path';
 import { executePromptWithLogger } from '../../src/prompt/runner.js';
 import { Logger } from '../../src/utils/logger.js';
+import { InMemoryFileSystem } from '../../src/fs/memoryFs.js';
 
-// Mock the model to return a single list_directory action
-vi.mock('../../src/models/index.ts', async (orig) => {
-  const actual = await (orig as any)();
-  return {
-    ...actual,
-    callModel: vi.fn().mockResolvedValue(
-      '{"actions":[{"action":"list_directory","args":{"path":".","recursive":false}}]}'
-    ),
-  };
-});
+// Fake model that returns a single list_directory action
+const fakeCallModel = async () => '{"actions":[{"action":"list_directory","args":{"path":".","recursive":false}}]}';
 
 type Event =
   | { type: 'agent_iteration'; iteration: number; max: number }
@@ -55,28 +46,22 @@ class TestEventLogger extends Logger {
 }
 
 describe('PromptRunner event sequence (happy path)', () => {
-  let tmpDir: string;
-
-  beforeEach(async () => {
-    tmpDir = await fs.mkdtemp(path.join(os.tmpdir(), 'agent-thing-prompt-'));
-    // no chdir in workers; we write explicit paths under tmpDir
-  });
-
-  afterEach(async () => {
-    // best-effort cleanup
-    try { await fs.rmdir(tmpDir, { recursive: true }); } catch { /* ignore */ }
-  });
 
   it('records agent iteration, model response preview, tool call/result, and completion', async () => {
-    // arrange: write a simple prompt file
-    const promptPath = path.join(tmpDir, 'test-prompt.md');
+    // arrange: create an in-memory FS with a prompt & a directory structure
+    const cwd = path.resolve('/virtual/project');
+    const promptPath = path.join(cwd, 'test-prompt.md');
     const promptContent = `---\nstatus: draft\nprovider: openai\n---\nPlease list the files in the current directory.`;
-    await fs.writeFile(promptPath, promptContent, 'utf8');
+    const memfs = new InMemoryFileSystem({
+      [promptPath]: promptContent,
+      [path.join(cwd, 'src/index.ts')]: 'console.log("hi")',
+      [path.join(cwd, 'README.md')]: '# Readme',
+    });
 
     const logger = new TestEventLogger(false);
 
     // act
-    const result = await executePromptWithLogger(promptPath, logger, { maxIterations: 1 });
+    const result = await executePromptWithLogger(promptPath, logger, { maxIterations: 1, fs: memfs, cwd, callModel: fakeCallModel as any });
 
     // assert result
     expect(result.success).toBe(true);

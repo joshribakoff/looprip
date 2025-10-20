@@ -1,6 +1,7 @@
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import type { FsActionOptions } from '../fs/types.js';
+import { NodeFileSystem } from '../fs/nodeFs.js';
 
 export const writeFileArgsSchema = z
   .object({
@@ -19,8 +20,10 @@ export const writeFileArgsSchema = z
 
 export type WriteFileArgs = z.infer<typeof writeFileArgsSchema>;
 
-export async function writeFileAction(targetPath: string, contents: string): Promise<string> {
-  const resolvedPath = path.resolve(process.cwd(), targetPath);
+export async function writeFileAction(targetPath: string, contents: string, options: FsActionOptions = {}): Promise<string> {
+  const fs = options.fs ?? new NodeFileSystem();
+  const cwd = options.cwd ?? process.cwd();
+  const resolvedPath = path.resolve(cwd, targetPath);
   try {
     await fs.mkdir(path.dirname(resolvedPath), { recursive: true });
     await fs.writeFile(resolvedPath, contents, 'utf8');

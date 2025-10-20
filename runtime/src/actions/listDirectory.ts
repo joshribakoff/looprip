@@ -1,6 +1,7 @@
-import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { z } from 'zod';
+import type { FileSystem, FsActionOptions } from '../fs/types.js';
+import { NodeFileSystem } from '../fs/nodeFs.js';
 
 const DEFAULT_MAX_RESULTS = 200;
 const MAX_RESULTS_LIMIT = 1000;
@@ -85,6 +86,7 @@ function globToRegExp(pattern: string): RegExp {
 }
 
 async function walkDirectory(
+  fs: FileSystem,
   basePath: string,
   currentPath: string,
   args: ListDirectoryArgs,
@@ -125,7 +127,7 @@ async function walkDirectory(
     }
 
     if (dirent.isDirectory() && args.recursive) {
-      const truncated = await walkDirectory(basePath, absolutePath, args, entries, matcher);
+      const truncated = await walkDirectory(fs, basePath, absolutePath, args, entries, matcher);
       if (truncated) {
         return true;
       }
@@ -135,9 +137,11 @@ async function walkDirectory(
   return false;
 }
 
-export async function listDirectoryAction(rawArgs: ListDirectoryArgs): Promise<ListDirectoryResult> {
+export async function listDirectoryAction(rawArgs: ListDirectoryArgs, options: FsActionOptions = {}): Promise<ListDirectoryResult> {
+  const fs = options.fs ?? new NodeFileSystem();
+  const cwd = options.cwd ?? process.cwd();
   const args = rawArgs;
-  const resolvedPath = path.resolve(process.cwd(), args.path);
+  const resolvedPath = path.resolve(cwd, args.path);
 
   let stats;
 
@@ -154,7 +158,7 @@ export async function listDirectoryAction(rawArgs: ListDirectoryArgs): Promise<L
 
   const entries: ListDirectoryEntry[] = [];
   const matcher = args.pattern ? globToRegExp(args.pattern) : null;
-  const truncated = await walkDirectory(resolvedPath, resolvedPath, args, entries, matcher);
+  const truncated = await walkDirectory(fs, resolvedPath, resolvedPath, args, entries, matcher);
 
   return {
     resolvedPath,

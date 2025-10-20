@@ -1,5 +1,5 @@
 import { parsePromptFile } from '../core/prompt.js';
-import { callModel, type ConversationEntry } from '../models/index.js';
+import { callModel as defaultCallModel, type ConversationEntry } from '../models/index.js';
 import type { Provider } from '../config.js';
 import { loadSystemPrompt } from '../utils/systemPrompt.js';
 import type { Logger } from '../utils/logger.js';
@@ -8,6 +8,8 @@ import { readFileAction } from '../actions/readFile.js';
 import { runNpmScriptAction } from '../actions/runNpmScript.js';
 import { writeFileAction } from '../actions/writeFile.js';
 import { agentActionSchema, isAgentActionName, type AgentAction } from '../actions/agentActionSchema.js';
+import type { FileSystem } from '../fs/types.js';
+import { NodeFileSystem } from '../fs/nodeFs.js';
 
 function extractJsonPayload(raw: string): unknown {
   const trimmed = raw.trim();
@@ -70,12 +72,12 @@ function parseActionPayload(rawResponse: string): AgentAction[] {
   return rawActions.slice(0, 2).map((rawAction) => agentActionSchema.parse(rawAction) as AgentAction);
 }
 
-async function executeAction(action: AgentAction, logger: Logger): Promise<{ observation: string; continueLoop: boolean; historyInjection?: string }> {
+async function executeAction(action: AgentAction, logger: Logger, deps: { fs: FileSystem; cwd: string }): Promise<{ observation: string; continueLoop: boolean; historyInjection?: string }> {
   switch (action.action) {
     case 'read_file': {
       const { path } = action.args;
       logger.agentToolCall('read_file', { path });
-      const { contents, resolvedPath } = await readFileAction(path);
+      const { contents, resolvedPath } = await readFileAction(path, { fs: deps.fs, cwd: deps.cwd });
       const limit = 6000;
       const truncated = contents.length > limit ? `${contents.slice(0, limit)}\n...[truncated ${contents.length - limit} characters]` : contents;
       const observation = `Observation: read_file succeeded.\npath: ${resolvedPath}\ncontents:\n${truncated}`;
@@ -91,7 +93,7 @@ async function executeAction(action: AgentAction, logger: Logger): Promise<{ obs
     case 'write_file': {
       const { path, contents } = action.args;
       logger.agentToolCall('write_file', { path });
-      const resolvedPath = await writeFileAction(path, contents);
+      const resolvedPath = await writeFileAction(path, contents, { fs: deps.fs, cwd: deps.cwd });
       const observation = `Observation: write_file succeeded at ${resolvedPath}.`;
       logger.agentToolResult({ path: resolvedPath, bytes: typeof contents === 'string' ? contents.length : 0 });
       logger.info(`Wrote file: ${resolvedPath}`);
@@ -104,7 +106,7 @@ async function executeAction(action: AgentAction, logger: Logger): Promise<{ obs
 
     case 'list_directory': {
       logger.agentToolCall('list_directory', action.args);
-      const result = await listDirectoryAction(action.args);
+      const result = await listDirectoryAction(action.args, { fs: deps.fs, cwd: deps.cwd });
       const entriesText = result.entries.length > 0
         ? result.entries.map((entry) => `- [${entry.type}] ${entry.path}`).join('\n')
         : '- [empty] (no entries matched)';
@@ -156,6 +158,9 @@ export interface PromptRunnerConfig {
   maxIterations?: number;
   openaiApiKey?: string;
   anthropicApiKey?: string;
+  fs?: FileSystem;
+  cwd?: string;
+  callModel?: typeof defaultCallModel;
 }
 
 export async function executePromptWithLogger(
@@ -166,7 +171,9 @@ export async function executePromptWithLogger(
   logger.info(`Loading prompt from: ${promptPath}`);
 
   // Parse the prompt file
-  const parsed = await parsePromptFile(promptPath);
+  const fs = config?.fs ?? new NodeFileSystem();
+  const cwd = config?.cwd ?? process.cwd();
+  const parsed = await parsePromptFile(promptPath, fs);
   const { frontMatter, body } = parsed;
 
   // Determine provider and model
@@ -194,6 +201,7 @@ export async function executePromptWithLogger(
     logger.agentIteration(iteration + 1, maxIterations);
 
     // Call the model
+    const callModel = config?.callModel ?? defaultCallModel;
     const rawReply = await callModel(provider, systemPrompt, history);
     history.push({ role: 'assistant', content: rawReply });
 
@@ -207,7 +215,7 @@ export async function executePromptWithLogger(
 
     for (const [index, action] of actions.entries()) {
       logger.info(`Executing action ${index + 1}/${actions.length}: ${action.action}`);
-      const result = await executeAction(action, logger);
+      const result = await executeAction(action, logger, { fs, cwd });
       logger.info(result.observation);
 
       if (result.historyInjection && iteration + 1 < maxIterations) {
