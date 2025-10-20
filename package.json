@@ -28,7 +28,10 @@
     "format": "bash ./scripts/format.sh",
     "lint": "bash ./scripts/lint.sh",
     "prepare": "husky install || true",
-    "lint:staged": "lint-staged"
+    "lint:staged": "lint-staged",
+    "docs:astro:dev": "npm --prefix docs-astro run dev",
+    "docs:astro:build": "npm --prefix docs-astro run build",
+    "docs:astro:preview": "npm --prefix docs-astro run preview"
   },
   "devDependencies": {
     "concurrently": "^9.1.2",

@@ -1,0 +1,26 @@
+---
+import { getCollection } from 'astro:content';
+const posts = (await getCollection('blog')).sort((a, b) => {
+  return (b.data.pubDate?.getTime?.() ?? 0) - (a.data.pubDate?.getTime?.() ?? 0);
+});
+---
+<html>
+  <head>
+    <title>Blog | Agent Thing</title>
+  </head>
+  <body>
+    <main style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
+      <h1>Blog</h1>
+      <ul>
+        {posts.map((post) => (
+          <li>
+            <a href={`/blog/${post.slug}/`}>{post.data.title}</a>
+            {post.data.pubDate && (
+              <small> — {post.data.pubDate.toISOString().slice(0, 10)}</small>
+            )}
+          </li>
+        ))}
+      </ul>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,30 @@
+---
+import { getCollection } from 'astro:content';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog');
+  return posts.map((post) => ({ params: { slug: post.slug }, props: { post } }));
+}
+
+const { post } = Astro.props;
+const { Content } = await post.render();
+---
+<html>
+  <head>
+    <title>{post.data.title} | Agent Thing</title>
+  </head>
+  <body>
+    <main style="max-width: 800px; margin: 2rem auto; padding: 0 1rem;">
+      <a href="/blog/">← All posts</a>
+      <h1>{post.data.title}</h1>
+      {post.data.authorImage && (
+        <img src={post.data.authorImage} alt={post.data.author ?? 'Author'} width="48" height="48" style="border-radius: 50%;" />
+      )}
+      {post.data.pubDate && (
+        <p><small>{post.data.pubDate.toISOString().slice(0, 10)}</small></p>
+      )}
+      <Content />
+    </main>
+  </body>
+  
+</html>
