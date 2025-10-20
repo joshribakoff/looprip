@@ -1,12 +1,12 @@
-import React from 'react';
-import { Box, Text } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text, useInput } from 'ink';
 
 export type MainMenuChoice = { title: string; value: string };
 
 type Props = {
   header: React.ReactNode;
-  index: number;
   notice: { text: string; color?: 'green' | 'red' | 'yellow' } | null;
+  onSelect: (value: string) => void;
 };
 
 const MAIN_MENU_CHOICES: MainMenuChoice[] = [
@@ -16,7 +16,15 @@ const MAIN_MENU_CHOICES: MainMenuChoice[] = [
   { title: 'Quit', value: 'quit' },
 ];
 
-export function MainMenuScreen({ header, index, notice }: Props) {
+export function MainMenuScreen({ header, notice, onSelect }: Props) {
+  const [index, setIndex] = useState(0);
+
+  useInput((input, key) => {
+    if (key.upArrow) setIndex((i) => (i > 0 ? i - 1 : i));
+    else if (key.downArrow) setIndex((i) => (i < MAIN_MENU_CHOICES.length - 1 ? i + 1 : 0));
+    else if (key.return) onSelect(MAIN_MENU_CHOICES[index]?.value ?? 'quit');
+    else if (input === 'q' || key.escape) onSelect('quit');
+  });
   return (
     <Box flexDirection="column">
       {header}

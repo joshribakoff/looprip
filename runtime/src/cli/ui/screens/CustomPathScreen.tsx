@@ -1,16 +1,15 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Box, Text, useInput } from 'ink';
 import TextInput from 'ink-text-input';
 
 type Props = {
   header: React.ReactNode;
-  value: string;
-  onChange: (v: string) => void;
   onSubmit: (v: string) => void;
   onBack?: () => void;
 };
 
-export function CustomPathScreen({ header, value, onChange, onSubmit, onBack }: Props) {
+export function CustomPathScreen({ header, onSubmit, onBack }: Props) {
+  const [value, setValue] = useState('');
   useInput((input, key) => {
     if (key.escape && onBack) onBack();
   });
@@ -19,7 +18,7 @@ export function CustomPathScreen({ header, value, onChange, onSubmit, onBack }: 
       {header}
       <Box marginTop={1}>
         <Text>Enter path to pipeline YAML: </Text>
-        <TextInput value={value} onChange={onChange} onSubmit={onSubmit} />
+        <TextInput value={value} onChange={setValue} onSubmit={onSubmit} />
       </Box>
       <Box marginTop={1}>
         <Text dimColor>Esc: back</Text>
