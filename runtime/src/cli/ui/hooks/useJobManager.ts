@@ -118,17 +118,19 @@ export function useJobManager() {
         await runManagerRef.current.updateRunStatus(runId, 'completed');
         dispatch(actions.jobCompleted(runId, true));
       } else {
-        await runManagerRef.current.updateRunStatus(runId, 'failed', 'Pipeline execution failed');
-        dispatch(actions.jobFailed(runId, 'Pipeline execution failed'));
+        const msg = 'Pipeline execution failed';
+        logger.error(msg);
+        await runManagerRef.current.updateRunStatus(runId, 'failed', msg);
+        dispatch(actions.jobFailed(runId, msg));
       }
       
       // Flush logger to ensure all logs are written
       await logger.flush();
     } catch (error: any) {
-      await runManagerRef.current.updateRunStatus(runId, 'failed', error.message);
-      dispatch(actions.jobFailed(runId, error.message));
-      
-      // Flush logger to ensure error logs are written
+      const message = error?.message || String(error);
+      logger.error('Pipeline job failed', message);
+      await runManagerRef.current.updateRunStatus(runId, 'failed', message);
+      dispatch(actions.jobFailed(runId, message));
       await logger.flush();
     } finally {
       activeJobsRef.current.delete(runId);
@@ -163,8 +165,10 @@ export function useJobManager() {
 
       await logger.flush();
     } catch (error: any) {
-      await runManagerRef.current.updateRunStatus(runId, 'failed', error.message);
-      dispatch(actions.jobFailed(runId, error.message));
+      const message = error?.message || String(error);
+      logger.error('Prompt job failed', message);
+      await runManagerRef.current.updateRunStatus(runId, 'failed', message);
+      dispatch(actions.jobFailed(runId, message));
       await logger.flush();
     } finally {
       activeJobsRef.current.delete(runId);

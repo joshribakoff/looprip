@@ -43,7 +43,14 @@ export function JobListScreen({ header, jobs, index }: Props) {
         <Box marginTop={1} flexDirection="column">
           {jobs.map((job, i) => {
             const createdDate = new Date(job.run.createdAt);
-            const timeStr = createdDate.toLocaleTimeString();
+            const started = job.run.startedAt ? new Date(job.run.startedAt) : null;
+            const completed = job.run.completedAt ? new Date(job.run.completedAt) : null;
+            const statusText = job.run.status;
+            const timeStr = completed
+              ? completed.toLocaleTimeString()
+              : started
+                ? started.toLocaleTimeString()
+                : createdDate.toLocaleTimeString();
             return (
               <Box key={job.run.id} flexDirection="column" marginBottom={i < jobs.length - 1 ? 1 : 0}>
                 <Text color={i === index ? 'cyan' : undefined}>
@@ -51,10 +58,13 @@ export function JobListScreen({ header, jobs, index }: Props) {
                   <Text color={statusColor(job.run.status)}>
                     {statusSymbol(job.run.status)}
                   </Text>
-                  {' '}
-                  {job.run.pipelineName || 'Unnamed pipeline'}
-                  {' '}
-                  <Text dimColor>({timeStr})</Text>
+                  {'  '}
+                  <Text bold>{(job.run.pipelineName || 'Unnamed pipeline')}</Text>
+                  {'  '}
+                  <Text dimColor>status:</Text>{' '}
+                  <Text color={statusColor(job.run.status)}>{statusText}</Text>
+                  {'  '}
+                  <Text dimColor>{completed ? 'ended:' : started ? 'started:' : 'created:'} {timeStr}</Text>
                 </Text>
                 {job.run.userPrompt && (
                   <Text dimColor>    {job.run.userPrompt.slice(0, 60)}{job.run.userPrompt.length > 60 ? '...' : ''}</Text>

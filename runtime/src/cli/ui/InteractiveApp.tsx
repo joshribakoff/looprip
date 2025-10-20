@@ -189,10 +189,10 @@ function AppInner() {
       
       // Queue the job to run in the background
       const pipelineName = pipeline.name || path.basename(selectedPath, '.yaml');
-      await queueJob(selectedPath, pipelineName, userPrompt || undefined);
-      
-      // Navigate to job list to show the queued job
-      dispatch(actions.navigateToJobList());
+      const runId = await queueJob(selectedPath, pipelineName, userPrompt || undefined);
+
+      // Navigate straight to the job detail with live logs; user can Esc to see the job list
+      dispatch(actions.navigateToJobDetail(runId));
     } catch (err: any) {
       dispatch(actions.pipelineFailed(err?.message || String(err)));
     }
@@ -202,8 +202,9 @@ function AppInner() {
     try {
       // Queue prompt as a background job and navigate to job list
       const promptName = path.basename(selectedPath);
-      await queuePrompt(selectedPath, promptName);
-      dispatch(actions.navigateToJobList());
+      const runId = await queuePrompt(selectedPath, promptName);
+      // Go to the job detail to show live logs immediately
+      dispatch(actions.navigateToJobDetail(runId));
     } catch (err: any) {
       dispatch(actions.promptExecutionFailed(err?.message || String(err)));
     }
