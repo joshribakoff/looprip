@@ -1,5 +1,5 @@
-import React from 'react';
-import { Box, Text, useStdout } from 'ink';
+import React, { useState } from 'react';
+import { Box, Text, useStdout, useInput } from 'ink';
 import { ScrollableLogView } from '../components/ScrollableLogView.js';
 
 type Props = {
@@ -8,18 +8,21 @@ type Props = {
   status: 'idle' | 'loading' | 'success' | 'error';
   message: string;
   lastResultSuccess: boolean | null;
-  scrollOffset: number;
+  onBackToMenu?: () => void;
+  onQuit?: () => void;
 };
 
-export function StatusScreen({
-  header,
-  mode,
-  status,
-  message,
-  lastResultSuccess,
-  scrollOffset,
-}: Props) {
+export function StatusScreen({ header, mode, status, message, lastResultSuccess, onBackToMenu, onQuit }: Props) {
   const { stdout } = useStdout();
+  const [scrollOffset, setScrollOffset] = useState(0);
+  useInput((input, key) => {
+    if (key.upArrow) setScrollOffset((s) => Math.max(0, s - 1));
+    else if (key.downArrow) setScrollOffset((s) => s + 1);
+    else if (mode === 'summary') {
+      if (key.return && onBackToMenu) onBackToMenu();
+      if ((input === 'q' || key.escape) && onQuit) onQuit();
+    }
+  });
   // Calculate available height: terminal height minus space for UI elements
   // Header (3 lines) + status (2 lines) + message (2 lines) + scroll indicator (2 lines) + footer (2 lines) + borders/padding (~6 lines) = ~17 lines overhead
   const terminalHeight = stdout.rows || 24; // Default to 24 if not available

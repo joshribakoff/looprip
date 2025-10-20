@@ -16,60 +16,29 @@ describe('uiStore', () => {
       expect(state).toEqual({
         cwd: '/test/project',
         mode: 'main-menu',
-        index: 0,
-        customPath: '',
-        userPrompt: '',
         message: '',
         status: 'idle',
         lastResultSuccess: null,
         notice: null,
+        pendingPipelinePath: undefined,
         scrollOffset: 0,
         jobs: [],
         selectedJobId: null,
+        index: 0,
+        customPath: '',
+        userPrompt: '',
       });
     });
   });
 
   describe('reducer', () => {
     describe('navigation actions', () => {
-      it('should handle NAVIGATE_UP', () => {
-        const state = { ...initialState, index: 2 };
-        const action: UIAction = actions.navigateUp();
-
-        const newState = reducer(state, action);
-        expect(newState.index).toBe(1);
-      });
-
-      it('should handle NAVIGATE_UP at index 0', () => {
-        const state = { ...initialState, index: 0 };
-        const action: UIAction = actions.navigateUp();
-
-        const newState = reducer(state, action);
-        expect(newState.index).toBe(0); // Should not go below 0
-      });
-
-      it('should handle NAVIGATE_DOWN', () => {
-        const state = { ...initialState, index: 0 };
-        const action: UIAction = actions.navigateDown(5);
-
-        const newState = reducer(state, action);
-        expect(newState.index).toBe(1);
-      });
-
-      it('should handle NAVIGATE_DOWN at max index', () => {
-        const state = { ...initialState, index: 4 };
-        const action: UIAction = actions.navigateDown(4);
-
-        const newState = reducer(state, action);
-        expect(newState.index).toBe(0); // Wraps to 0 when at max
-      });
       it('should handle NAVIGATE_TO_MAIN_MENU', () => {
         const state = { ...initialState, mode: 'select' as const };
         const action: UIAction = actions.navigateToMainMenu();
 
         const newState = reducer(state, action);
         expect(newState.mode).toBe('main-menu');
-        expect(newState.index).toBe(0);
         expect(newState.notice).toBe(null);
       });
 
@@ -79,7 +48,6 @@ describe('uiStore', () => {
 
         const newState = reducer(state, action);
         expect(newState.mode).toBe('select');
-        expect(newState.index).toBe(0);
       });
 
       it('should handle NAVIGATE_TO_ENTER_PROMPT', () => {
@@ -88,7 +56,7 @@ describe('uiStore', () => {
 
         const newState = reducer(state, action);
         expect(newState.mode).toBe('enter-prompt');
-        expect(newState.userPrompt).toBe('');
+        expect(newState.pendingPipelinePath).toBe('/test/pipeline.yaml');
       });
 
       it('should handle RETURN_FROM_SCREEN', () => {
@@ -97,52 +65,9 @@ describe('uiStore', () => {
 
         const newState = reducer(state, action);
         expect(newState.mode).toBe('select');
-        expect(newState.customPath).toBe('');
-        expect(newState.userPrompt).toBe('');
       });
     });
 
-    describe('input actions', () => {
-      it('should handle INPUT_CHANGED for customPath', () => {
-        const state = { ...initialState };
-        const action: UIAction = actions.inputChanged('customPath', '/new/path');
-
-        const newState = reducer(state, action);
-        expect(newState.customPath).toBe('/new/path');
-      });
-
-      it('should handle INPUT_CHANGED for userPrompt', () => {
-        const state = { ...initialState };
-        const action: UIAction = actions.inputChanged('userPrompt', 'New prompt text');
-
-        const newState = reducer(state, action);
-        expect(newState.userPrompt).toBe('New prompt text');
-      });
-
-      it('should handle SCROLL_UP', () => {
-        const state = { ...initialState, scrollOffset: 5 };
-        const action: UIAction = actions.scrollUp();
-
-        const newState = reducer(state, action);
-        expect(newState.scrollOffset).toBe(4);
-      });
-
-      it('should handle SCROLL_UP at minimum', () => {
-        const state = { ...initialState, scrollOffset: 0 };
-        const action: UIAction = actions.scrollUp();
-
-        const newState = reducer(state, action);
-        expect(newState.scrollOffset).toBe(0); // Should not go below 0
-      });
-
-      it('should handle SCROLL_DOWN', () => {
-        const state = { ...initialState, scrollOffset: 0 };
-        const action: UIAction = actions.scrollDown();
-
-        const newState = reducer(state, action);
-        expect(newState.scrollOffset).toBe(1);
-      });
-    });
 
     describe('pipeline lifecycle actions', () => {
       it('should handle PIPELINE_LOADING_STARTED', () => {
@@ -173,7 +98,6 @@ describe('uiStore', () => {
         expect(newState.status).toBe('success');
         expect(newState.message).toBe('Pipeline completed successfully');
         expect(newState.lastResultSuccess).toBe(true);
-        expect(newState.scrollOffset).toBe(0);
         // The actual reducer doesn't set notice for PIPELINE_COMPLETED
       });
       it('should handle PIPELINE_COMPLETED with failure', () => {
@@ -185,7 +109,6 @@ describe('uiStore', () => {
         expect(newState.status).toBe('error');
         expect(newState.message).toBe('Pipeline failed');
         expect(newState.lastResultSuccess).toBe(false);
-        expect(newState.scrollOffset).toBe(0);
         // The actual reducer doesn't set notice for PIPELINE_COMPLETED
       });
       it('should handle PIPELINE_FAILED', () => {
@@ -218,8 +141,6 @@ describe('uiStore', () => {
 
         const newState = reducer(state, action);
         expect(newState.mode).toBe('main-menu');
-        expect(newState.index).toBe(0);
-        expect(newState.customPath).toBe('');
         expect(newState.notice).toEqual({
           text: 'Prompt created: prompts/new.md (also at /test/prompts/new.md)',
           color: 'green',
@@ -250,22 +171,6 @@ describe('uiStore', () => {
     });
 
     describe('system actions', () => {
-      it('should handle CHOICES_CHANGED', () => {
-        const state = { ...initialState, index: 5 };
-        const action: UIAction = actions.choicesChanged(3);
-
-        const newState = reducer(state, action);
-        expect(newState.index).toBe(2); // Should clamp to new length - 1
-      });
-
-      it('should handle CHOICES_CHANGED with empty list', () => {
-        const state = { ...initialState, index: 5 };
-        const action: UIAction = actions.choicesChanged(0);
-
-        const newState = reducer(state, action);
-        expect(newState.index).toBe(0); // Should reset to 0
-      });
-
       it('should handle NOTICE_DISMISSED', () => {
         const state = {
           ...initialState,
@@ -292,18 +197,12 @@ describe('uiStore', () => {
 
   describe('action creators', () => {
     it('should create correct navigation actions', () => {
-      expect(actions.navigateUp()).toEqual({ type: 'NAVIGATE_UP' });
-      expect(actions.navigateDown(5)).toEqual({ type: 'NAVIGATE_DOWN', maxIndex: 5 });
       expect(actions.navigateToMainMenu()).toEqual({ type: 'NAVIGATE_TO_MAIN_MENU' });
-    });
-
-    it('should create correct input actions', () => {
-      expect(actions.inputChanged('customPath', '/test')).toEqual({
-        type: 'INPUT_CHANGED',
-        field: 'customPath',
-        value: '/test',
+      expect(actions.navigateToSelectPipeline()).toEqual({ type: 'NAVIGATE_TO_SELECT_PIPELINE' });
+      expect(actions.navigateToEnterPrompt('/x')).toEqual({
+        type: 'NAVIGATE_TO_ENTER_PROMPT',
+        pipelinePath: '/x',
       });
-      expect(actions.scrollUp()).toEqual({ type: 'SCROLL_UP' });
     });
 
     it('should create correct pipeline actions', () => {
