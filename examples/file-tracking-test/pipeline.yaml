@@ -7,7 +7,7 @@ nodes:
     description: Create a test file
     command: echo "test content" > test-file.txt
     track_changes: true
-    
+
   - id: verify
     type: task
     description: Verify the file was created and tracked

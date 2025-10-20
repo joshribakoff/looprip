@@ -2,7 +2,7 @@
  * Schema parsing and validation types
  */
 
-export type SchemaType = 
+export type SchemaType =
   | 'string'
   | 'number'
   | 'boolean'

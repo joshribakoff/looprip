@@ -62,7 +62,9 @@ async function lint(): Promise<number> {
 
     const trimmed = content.trimStart();
     if (!trimmed.startsWith('---')) {
-      errors.push(`${path.relative(ROOT, filePath)}: missing YAML front matter. File must start with ---`);
+      errors.push(
+        `${path.relative(ROOT, filePath)}: missing YAML front matter. File must start with ---`,
+      );
       continue;
     }
 

@@ -7,42 +7,51 @@ type Props = {
   job: JobInfo;
   scrollOffset: number;
   logFilePaths: { structured: string; plain: string; toolCalls: string };
-  onResume?: () => void;
-  onStartFresh?: () => void;
 };
 
-export function JobDetailScreen({ header, job, scrollOffset, logFilePaths, onResume, onStartFresh }: Props) {
+export function JobDetailScreen({ header, job, scrollOffset, logFilePaths }: Props) {
   const autoFollowRef = useRef(job.autoFollow);
-  
+
   useEffect(() => {
     autoFollowRef.current = job.autoFollow;
   }, [job.autoFollow]);
 
   const statusColor = (status: string) => {
     switch (status) {
-      case 'completed': return 'green';
-      case 'running': return 'yellow';
-      case 'failed': return 'red';
-      case 'interrupted': return 'magenta';
-      default: return 'gray';
+      case 'completed':
+        return 'green';
+      case 'running':
+        return 'yellow';
+      case 'failed':
+        return 'red';
+      case 'interrupted':
+        return 'magenta';
+      default:
+        return 'gray';
     }
   };
 
   const statusSymbol = (status: string) => {
     switch (status) {
-      case 'completed': return '✔';
-      case 'running': return '⟳';
-      case 'failed': return '✖';
-      case 'interrupted': return '⊘';
-      default: return '○';
+      case 'completed':
+        return '✔';
+      case 'running':
+        return '⟳';
+      case 'failed':
+        return '✖';
+      case 'interrupted':
+        return '⊘';
+      default:
+        return '○';
     }
   };
 
   const canResume = job.run.status === 'failed' || job.run.status === 'interrupted';
 
-  const displayLines = job.logLines.length > 0 
-    ? job.logLines.slice(scrollOffset, scrollOffset + 20) 
-    : ['No logs yet...'];
+  const displayLines =
+    job.logLines.length > 0
+      ? job.logLines.slice(scrollOffset, scrollOffset + 20)
+      : ['No logs yet...'];
 
   const createdDate = new Date(job.run.createdAt);
   const startedDate = job.run.startedAt ? new Date(job.run.startedAt) : null;
@@ -108,7 +117,8 @@ export function JobDetailScreen({ header, job, scrollOffset, logFilePaths, onRes
         {job.logLines.length > displayLines.length && (
           <Box marginTop={1}>
             <Text dimColor>
-              Showing {scrollOffset + 1}-{Math.min(scrollOffset + 20, job.logLines.length)} of {job.logLines.length} lines
+              Showing {scrollOffset + 1}-{Math.min(scrollOffset + 20, job.logLines.length)} of{' '}
+              {job.logLines.length} lines
             </Text>
           </Box>
         )}
@@ -116,7 +126,9 @@ export function JobDetailScreen({ header, job, scrollOffset, logFilePaths, onRes
 
       {canResume && (
         <Box marginTop={1} flexDirection="column">
-          <Text bold color="yellow">Actions:</Text>
+          <Text bold color="yellow">
+            Actions:
+          </Text>
           <Text dimColor>r: Resume from saved state</Text>
           <Text dimColor>n: Start fresh (new run)</Text>
         </Box>
@@ -124,11 +136,11 @@ export function JobDetailScreen({ header, job, scrollOffset, logFilePaths, onRes
 
       <Box marginTop={1}>
         <Text dimColor>
-          {job.run.status === 'running' 
-            ? '↑/↓: scroll • f: toggle auto-follow • Esc: back' 
-            : canResume 
-            ? '↑/↓: scroll • r: resume • n: new run • Esc: back'
-            : '↑/↓: scroll • Esc: back'}
+          {job.run.status === 'running'
+            ? '↑/↓: scroll • f: toggle auto-follow • Esc: back'
+            : canResume
+              ? '↑/↓: scroll • r: resume • n: new run • Esc: back'
+              : '↑/↓: scroll • Esc: back'}
         </Text>
       </Box>
     </Box>

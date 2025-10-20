@@ -12,28 +12,17 @@ import { UIProvider } from '../../src/cli/ui/state/uiStore.js';
  */
 export function createTestProvider(cwd = '/test') {
   return function TestProvider({ children }: { children: React.ReactNode }) {
-    return (
-      <UIProvider cwd={cwd}>
-        {children}
-      </UIProvider>
-    );
+    return <UIProvider cwd={cwd}>{children}</UIProvider>;
   };
 }
 
 /**
  * Renders a component with the UI provider for integration tests
  */
-export function renderWithProvider(
-  component: React.ReactElement,
-  cwd = '/test'
-) {
+export function renderWithProvider(component: React.ReactElement, cwd = '/test') {
   const TestProvider = createTestProvider(cwd);
-  
-  return render(
-    <TestProvider>
-      {component}
-    </TestProvider>
-  );
+
+  return render(<TestProvider>{component}</TestProvider>);
 }
 
 /**
@@ -53,9 +42,7 @@ export const mockPromptChoices = [
 /**
  * Creates a simple header component for testing
  */
-export const createTestHeader = () => (
-  <Text>Test Header</Text>
-);
+export const createTestHeader = () => <Text>Test Header</Text>;
 
 /**
  * Helper to get the rendered text content from ink-testing-library

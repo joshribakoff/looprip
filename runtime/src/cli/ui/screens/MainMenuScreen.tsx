@@ -1,5 +1,5 @@
 import React from 'react';
-import {Box, Text} from 'ink';
+import { Box, Text } from 'ink';
 
 export type MainMenuChoice = { title: string; value: string };
 

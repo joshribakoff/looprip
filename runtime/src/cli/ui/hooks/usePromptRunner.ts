@@ -8,7 +8,11 @@ import { listDirectoryAction } from '../../../actions/listDirectory.js';
 import { readFileAction } from '../../../actions/readFile.js';
 import { runNpmScriptAction } from '../../../actions/runNpmScript.js';
 import { writeFileAction } from '../../../actions/writeFile.js';
-import { agentActionSchema, isAgentActionName, type AgentAction } from '../../../actions/agentActionSchema.js';
+import {
+  agentActionSchema,
+  isAgentActionName,
+  type AgentAction,
+} from '../../../actions/agentActionSchema.js';
 
 function extractJsonPayload(raw: string): unknown {
   const trimmed = raw.trim();
@@ -36,9 +40,10 @@ function normalizeActionsPayload(payload: unknown): unknown[] {
 
     if (record.actions && typeof record.actions === 'object') {
       return Object.entries(record.actions as Record<string, unknown>).map(([action, value]) => {
-        const args = value && typeof value === 'object' && 'args' in (value as Record<string, unknown>)
-          ? (value as { args: unknown }).args
-          : value;
+        const args =
+          value && typeof value === 'object' && 'args' in (value as Record<string, unknown>)
+            ? (value as { args: unknown }).args
+            : value;
         return { action, args };
       });
     }
@@ -50,9 +55,10 @@ function normalizeActionsPayload(payload: unknown): unknown[] {
     const entries = Object.entries(record);
     if (entries.length > 0 && entries.every(([key]) => isAgentActionName(key))) {
       return entries.map(([action, value]) => {
-        const args = value && typeof value === 'object' && 'args' in (value as Record<string, unknown>)
-          ? (value as { args: unknown }).args
-          : value;
+        const args =
+          value && typeof value === 'object' && 'args' in (value as Record<string, unknown>)
+            ? (value as { args: unknown }).args
+            : value;
         return { action, args };
       });
     }
@@ -69,7 +75,9 @@ function parseActionPayload(rawResponse: string): AgentAction[] {
       console.warn('[agent] Received more than two actions. Truncating to the first two.');
     }
 
-    return rawActions.slice(0, 2).map((rawAction) => agentActionSchema.parse(rawAction) as AgentAction);
+    return rawActions
+      .slice(0, 2)
+      .map((rawAction) => agentActionSchema.parse(rawAction) as AgentAction);
   } catch (error) {
     console.error('[agent] Failed to parse agent response. Raw payload follows:');
     console.error(rawResponse);
@@ -77,77 +85,110 @@ function parseActionPayload(rawResponse: string): AgentAction[] {
   }
 }
 
-async function executeAction(action: AgentAction, logger: Logger): Promise<{ observation: string; continueLoop: boolean; historyInjection?: string }> {
-  switch (action.action) {
-    case 'read_file': {
-      const { path } = action.args;
-      const { contents, resolvedPath } = await readFileAction(path);
-      const limit = 6000;
-      const truncated = contents.length > limit ? `${contents.slice(0, limit)}\n...[truncated ${contents.length - limit} characters]` : contents;
-      const observation = `Observation: read_file succeeded.\npath: ${resolvedPath}\ncontents:\n${truncated}`;
-      logger.info(`Read file: ${resolvedPath}`);
-      return {
-        observation,
-        continueLoop: true,
-        historyInjection: `${observation}\nRespond with the next JSON action.`,
-      };
-    }
+async function executeAction(
+  action: AgentAction,
+  logger: Logger,
+): Promise<{ observation: string; continueLoop: boolean; historyInjection?: string }> {
+  try {
+    switch (action.action) {
+      case 'read_file': {
+        const { path } = action.args;
+        const { contents, resolvedPath } = await readFileAction(path);
+        const limit = 6000;
+        const truncated =
+          contents.length > limit
+            ? `${contents.slice(0, limit)}\n...[truncated ${contents.length - limit} characters]`
+            : contents;
+        const observation = `Observation: read_file succeeded.\npath: ${resolvedPath}\ncontents:\n${truncated}`;
+        logger.info(`Read file: ${resolvedPath}`);
+        return {
+          observation,
+          continueLoop: true,
+          historyInjection: `${observation}\nRespond with the next JSON action.`,
+        };
+      }
 
-    case 'write_file': {
-      const { path, contents } = action.args;
-      const resolvedPath = await writeFileAction(path, contents);
-      const observation = `Observation: write_file succeeded at ${resolvedPath}.`;
-      logger.info(`Wrote file: ${resolvedPath}`);
-      return {
-        observation,
-        continueLoop: false,
-        historyInjection: undefined,
-      };
-    }
+      case 'write_file': {
+        const { path, contents } = action.args;
+        const resolvedPath = await writeFileAction(path, contents);
+        const observation = `Observation: write_file succeeded at ${resolvedPath}.`;
+        logger.info(`Wrote file: ${resolvedPath}`);
+        return {
+          observation,
+          continueLoop: false,
+          historyInjection: undefined,
+        };
+      }
 
-    case 'list_directory': {
-      const result = await listDirectoryAction(action.args);
-      const entriesText = result.entries.length > 0
-        ? result.entries.map((entry) => `- [${entry.type}] ${entry.path}`).join('\n')
-        : '- [empty] (no entries matched)';
-      const truncatedNote = result.truncated ? `\n...[truncated to ${result.limit} entries]` : '';
-      const patternLine = `pattern: ${result.pattern ?? '<none>'}`;
-      const observation = `Observation: list_directory succeeded.\npath: ${result.resolvedPath}\n${patternLine}\nrecursive: ${result.recursive}\nentries:\n${entriesText}${truncatedNote}`;
-      logger.info(`Listed directory: ${result.resolvedPath} (${result.entries.length}${result.truncated ? '+' : ''} entries)`);
-      return {
-        observation,
-        continueLoop: true,
-        historyInjection: `${observation}\nRespond with the next JSON action.`,
-      };
-    }
+      case 'list_directory': {
+        const result = await listDirectoryAction(action.args);
+        const entriesText =
+          result.entries.length > 0
+            ? result.entries.map((entry) => `- [${entry.type}] ${entry.path}`).join('\n')
+            : '- [empty] (no entries matched)';
+        const truncatedNote = result.truncated ? `\n...[truncated to ${result.limit} entries]` : '';
+        const patternLine = `pattern: ${result.pattern ?? '<none>'}`;
+        const observation = `Observation: list_directory succeeded.\npath: ${result.resolvedPath}\n${patternLine}\nrecursive: ${result.recursive}\nentries:\n${entriesText}${truncatedNote}`;
+        logger.info(
+          `Listed directory: ${result.resolvedPath} (${result.entries.length}${result.truncated ? '+' : ''} entries)`,
+        );
+        return {
+          observation,
+          continueLoop: true,
+          historyInjection: `${observation}\nRespond with the next JSON action.`,
+        };
+      }
 
-    case 'run_npm_script': {
-      const result = await runNpmScriptAction(action.args);
-      const stdoutSuffix = result.stdoutTruncated ? `\n...[truncated ${result.stdoutOverflow} characters]` : '';
-      const stderrSuffix = result.stderrTruncated ? `\n...[truncated ${result.stderrOverflow} characters]` : '';
-      const stdoutBlock = result.stdout ? `${result.stdout}${stdoutSuffix}` : `[no stdout]${stdoutSuffix}`;
-      const stderrBlock = result.stderr ? `${result.stderr}${stderrSuffix}` : `[no stderr]${stderrSuffix}`;
-      const observation = [
-        'Observation: run_npm_script completed.',
-        `script: ${result.script}`,
-        `exit_code: ${result.exitCode ?? 'null'}`,
-        `signal: ${result.signal ?? 'null'}`,
-        `timed_out: ${result.timedOut}`,
-        'stdout:',
-        stdoutBlock,
-        'stderr:',
-        stderrBlock,
-      ].join('\n');
-      logger.info(`Ran npm script: ${result.npmScript} (exit ${result.exitCode ?? 'null'})`);
-      return {
-        observation,
-        continueLoop: true,
-        historyInjection: `${observation}\nRespond with the next JSON action.`,
-      };
-    }
+      case 'run_npm_script': {
+        const result = await runNpmScriptAction(action.args);
+        const stdoutSuffix = result.stdoutTruncated
+          ? `\n...[truncated ${result.stdoutOverflow} characters]`
+          : '';
+        const stderrSuffix = result.stderrTruncated
+          ? `\n...[truncated ${result.stderrOverflow} characters]`
+          : '';
+        const stdoutBlock = result.stdout
+          ? `${result.stdout}${stdoutSuffix}`
+          : `[no stdout]${stdoutSuffix}`;
+        const stderrBlock = result.stderr
+          ? `${result.stderr}${stderrSuffix}`
+          : `[no stderr]${stderrSuffix}`;
+        const observation = [
+          'Observation: run_npm_script completed.',
+          `script: ${result.script}`,
+          `exit_code: ${result.exitCode ?? 'null'}`,
+          `signal: ${result.signal ?? 'null'}`,
+          `timed_out: ${result.timedOut}`,
+          'stdout:',
+          stdoutBlock,
+          'stderr:',
+          stderrBlock,
+        ].join('\n');
+        logger.info(`Ran npm script: ${result.npmScript} (exit ${result.exitCode ?? 'null'})`);
+        return {
+          observation,
+          continueLoop: true,
+          historyInjection: `${observation}\nRespond with the next JSON action.`,
+        };
+      }
 
-    default:
-      throw new Error(`Unsupported action: ${(action as { action: string }).action}`);
+      default:
+        throw new Error(`Unsupported action: ${(action as { action: string }).action}`);
+    }
+  } catch (err) {
+    const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    logger.error(`[agent] Tool error during action: ${action.action} -> ${msg}`);
+    const observation = [
+      'Observation: tool_error encountered.',
+      `action: ${action.action}`,
+      `error: ${msg}`,
+    ].join('\n');
+
+    return {
+      observation,
+      continueLoop: true,
+      historyInjection: `${observation}\nRespond with the next JSON action.`,
+    };
   }
 }
 
@@ -162,21 +203,21 @@ export function usePromptRunner(logger: Logger, config?: PromptRunnerConfig) {
     async (promptPath: string): Promise<{ success: boolean }> => {
       try {
         logger.loading(`Loading prompt from: ${promptPath}`);
-        
+
         // Parse the prompt file
         const parsed = await parsePromptFile(promptPath);
         const { frontMatter, body } = parsed;
-        
+
         // Determine provider and model
         const provider: Provider = frontMatter.provider || 'openai';
         const maxIterations = config?.maxIterations || 5;
-        
+
         logger.info(`Using provider: ${provider}`);
         logger.info(`Max iterations: ${maxIterations}`);
-        
+
         // Load system prompt
         const systemPrompt = await loadSystemPrompt();
-        
+
         // Initialize conversation history with the user's prompt (body only, no front matter)
         const history: ConversationEntry[] = [
           {
@@ -184,23 +225,41 @@ export function usePromptRunner(logger: Logger, config?: PromptRunnerConfig) {
             content: body,
           },
         ];
-        
+
         logger.info(`Starting agent loop...`);
-        
+
         // Run the agent loop
         for (let iteration = 0; iteration < maxIterations; iteration += 1) {
           logger.agentIteration(iteration + 1, maxIterations);
-          
+
           // Call the model
           const rawReply = await callModel(provider, systemPrompt, history);
           history.push({ role: 'assistant', content: rawReply });
-          
+
           logger.info(`Model response received (${rawReply.length} chars)`);
           logger.info(`Response preview: ${rawReply.slice(0, 200)}...`);
-          
+
           // Parse and execute actions
-          const actions = parseActionPayload(rawReply);
-          
+          let actions: AgentAction[] = [];
+          try {
+            actions = parseActionPayload(rawReply);
+          } catch (err) {
+            const msg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+            logger.error('[agent] Invalid JSON from model. Will inject parse_error and continue.');
+            const observation = ['Observation: parse_error encountered.', `error: ${msg}`].join(
+              '\n',
+            );
+            const injection = `${observation}\nRespond with the next JSON action.`;
+            if (iteration + 1 < maxIterations) {
+              history.push({ role: 'user', content: injection });
+              // Skip executing actions this iteration
+              continue;
+            } else {
+              logger.info(`Agent loop completed after ${iteration + 1} iteration(s)`);
+              break;
+            }
+          }
+
           let shouldContinue = false;
 
           for (const [index, action] of actions.entries()) {
@@ -224,7 +283,7 @@ export function usePromptRunner(logger: Logger, config?: PromptRunnerConfig) {
             break;
           }
         }
-        
+
         logger.info(`\nPrompt execution completed successfully`);
         return { success: true };
       } catch (error) {
@@ -233,7 +292,7 @@ export function usePromptRunner(logger: Logger, config?: PromptRunnerConfig) {
         throw error;
       }
     },
-    [logger, config]
+    [logger, config],
   );
 
   return { executePrompt };

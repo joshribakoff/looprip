@@ -46,7 +46,7 @@ function toPosix(value: string): string {
 function globToRegExp(pattern: string): RegExp {
   let regex = '^';
 
-  for (let index = 0; index < pattern.length;) {
+  for (let index = 0; index < pattern.length; ) {
     const char = pattern[index];
 
     if (char === '*') {
@@ -137,7 +137,10 @@ async function walkDirectory(
   return false;
 }
 
-export async function listDirectoryAction(rawArgs: ListDirectoryArgs, options: FsActionOptions = {}): Promise<ListDirectoryResult> {
+export async function listDirectoryAction(
+  rawArgs: ListDirectoryArgs,
+  options: FsActionOptions = {},
+): Promise<ListDirectoryResult> {
   const fs = options.fs ?? new NodeFileSystem();
   const cwd = options.cwd ?? process.cwd();
   const args = rawArgs;

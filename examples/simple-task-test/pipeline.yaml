@@ -6,7 +6,7 @@ nodes:
     type: task
     description: Echo a message
     command: echo "Hello from pipeline"
-    
+
   - id: list
     type: task
     description: List current directory

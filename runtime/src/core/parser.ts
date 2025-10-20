@@ -14,7 +14,7 @@ export class PipelineParser {
 
   parseYaml(content: string): Pipeline {
     const data = yaml.load(content) as any;
-    
+
     if (!data || typeof data !== 'object') {
       throw new Error('Invalid pipeline YAML: expected object');
     }
@@ -26,11 +26,11 @@ export class PipelineParser {
     const pipeline: Pipeline = {
       name: data.name,
       description: data.description,
-      nodes: data.nodes.map((node: any, index: number) => this.parseNode(node, index))
+      nodes: data.nodes.map((node: any, index: number) => this.parseNode(node, index)),
     };
 
     this.validate(pipeline);
-    
+
     return pipeline;
   }
 
@@ -71,7 +71,7 @@ export class PipelineParser {
       command: node.command,
       cwd: node.cwd,
       env: node.env,
-      track_changes: node.track_changes ?? false
+      track_changes: node.track_changes ?? false,
     };
   }
 
@@ -89,7 +89,9 @@ export class PipelineParser {
     }
 
     if (typeof node.output_schema !== 'string' && typeof node.output_schema !== 'object') {
-      throw new Error(`Agent node "${node.id}" has invalid "output_schema" field: must be string or object`);
+      throw new Error(
+        `Agent node "${node.id}" has invalid "output_schema" field: must be string or object`,
+      );
     }
 
     return {
@@ -100,7 +102,7 @@ export class PipelineParser {
       prompt: node.prompt,
       tools: node.tools,
       output_schema: node.output_schema,
-      context: node.context
+      context: node.context,
     };
   }
 
@@ -114,13 +116,13 @@ export class PipelineParser {
       type: 'gate',
       description: node.description,
       command: node.command,
-      message: node.message
+      message: node.message,
     };
   }
 
   private validate(pipeline: Pipeline): void {
     const nodeIds = new Set<string>();
-    
+
     for (const node of pipeline.nodes) {
       if (nodeIds.has(node.id)) {
         throw new Error(`Duplicate node ID: ${node.id}`);

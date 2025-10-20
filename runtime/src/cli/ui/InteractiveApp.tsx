@@ -1,8 +1,8 @@
-import React, {useEffect} from 'react';
-import {Box, Text, useInput, useApp, Spacer} from 'ink';
+import React, { useEffect } from 'react';
+import { Box, Text, useInput, useApp, Spacer } from 'ink';
 import path from 'path';
 import fs from 'fs/promises';
-import {PipelineParser} from '../../core/parser.js';
+import { PipelineParser } from '../../core/parser.js';
 import MainMenuScreen, { MAIN_MENU_CHOICES } from './screens/MainMenuScreen.js';
 import SelectScreen from './screens/SelectScreen.js';
 import SelectPromptScreen from './screens/SelectPromptScreen.js';
@@ -14,8 +14,7 @@ import JobListScreen from './screens/JobListScreen.js';
 import JobDetailScreen from './screens/JobDetailScreen.js';
 import { usePipelineDiscovery } from './hooks/usePipelineDiscovery.js';
 import { usePromptDiscovery } from './hooks/usePromptDiscovery.js';
-import { usePipelineRunner } from './hooks/usePipelineRunner.js';
-import { usePromptRunner } from './hooks/usePromptRunner.js';
+// Removed unused pipeline/prompt runner hooks in favor of background job manager
 import { useJobManager } from './hooks/useJobManager.js';
 import { UIProvider, useUiDispatch, useUiState, actions } from './state/uiStore.js';
 import { LoggerProvider, useInkLogger } from './logger/InkLogger.js';
@@ -33,15 +32,24 @@ function detectNeedsPrompt(pipeline: any): boolean {
 // Mode type is defined in the UI store; local alias removed
 
 function AppInner() {
-  const {exit} = useApp();
+  const { exit } = useApp();
   const cwd = process.cwd();
   const { choices, refreshChoices } = usePipelineDiscovery(cwd);
   const { choices: promptChoices, refreshChoices: refreshPromptChoices } = usePromptDiscovery(cwd);
-  const { mode, index, customPath, userPrompt, message, status, lastResultSuccess, scrollOffset, jobs, selectedJobId } = useUiState();
+  const {
+    mode,
+    index,
+    customPath,
+    userPrompt,
+    message,
+    status,
+    lastResultSuccess,
+    scrollOffset,
+    jobs,
+    selectedJobId,
+  } = useUiState();
   const dispatch = useUiDispatch();
-  const { logger } = useInkLogger();
-  const { executePipeline } = usePipelineRunner(logger);
-  const { executePrompt } = usePromptRunner(logger);
+  const { logger: _logger } = useInkLogger();
   const { queueJob, queuePrompt, resumeJob, getLogPaths } = useJobManager();
   // Toast/notice shown when returning to the main menu
   const { notice } = useUiState();
@@ -144,10 +152,10 @@ function AppInner() {
 
   const handleResumeJob = async () => {
     if (!selectedJobId) return;
-    const job = jobs.find(j => j.run.id === selectedJobId);
+    const job = jobs.find((j) => j.run.id === selectedJobId);
     if (!job) return;
     if (job.run.status !== 'failed' && job.run.status !== 'interrupted') return;
-    
+
     try {
       await resumeJob(selectedJobId);
       // Job will be updated via the polling mechanism
@@ -159,10 +167,10 @@ function AppInner() {
 
   const handleStartFreshJob = async () => {
     if (!selectedJobId) return;
-    const job = jobs.find(j => j.run.id === selectedJobId);
+    const job = jobs.find((j) => j.run.id === selectedJobId);
     if (!job) return;
     if (job.run.status !== 'failed' && job.run.status !== 'interrupted') return;
-    
+
     try {
       // Queue a new job with the same pipeline and prompt
       await queueJob(job.run.pipelinePath, job.run.pipelineName, job.run.userPrompt);
@@ -173,7 +181,10 @@ function AppInner() {
   };
 
   const runPipeline = async (selectedPath: string) => {
-    const exists = await fs.stat(selectedPath).then((s) => s.isFile()).catch(() => false);
+    const exists = await fs
+      .stat(selectedPath)
+      .then((s) => s.isFile())
+      .catch(() => false);
     if (!exists) {
       dispatch(actions.pipelineNotFound(selectedPath));
       return;
@@ -186,7 +197,7 @@ function AppInner() {
         dispatch(actions.navigateToEnterPrompt(selectedPath));
         return;
       }
-      
+
       // Queue the job to run in the background
       const pipelineName = pipeline.name || path.basename(selectedPath, '.yaml');
       const runId = await queueJob(selectedPath, pipelineName, userPrompt || undefined);
@@ -235,9 +246,7 @@ function AppInner() {
   );
 
   if (mode === 'main-menu') {
-    return wrapInBorder(
-      <MainMenuScreen header={header} index={index} notice={notice} />
-    );
+    return wrapInBorder(<MainMenuScreen header={header} index={index} notice={notice} />);
   }
 
   if (mode === 'create-prompt') {
@@ -246,7 +255,7 @@ function AppInner() {
 
   if (mode === 'select-prompt') {
     return wrapInBorder(
-      <SelectPromptScreen header={header} choices={promptChoices} index={index} notice={notice} />
+      <SelectPromptScreen header={header} choices={promptChoices} index={index} notice={notice} />,
     );
   }
 
@@ -261,7 +270,7 @@ function AppInner() {
           const abs = path.resolve(cwd, val.trim());
           void runPipeline(abs);
         }}
-      />
+      />,
     );
   }
 
@@ -273,7 +282,7 @@ function AppInner() {
         onChange={(v: string) => dispatch(actions.inputChanged('userPrompt', v))}
         onBack={() => dispatch(actions.returnFromScreen())}
         onSubmit={() => onSubmitPrompt()}
-      />
+      />,
     );
   }
 
@@ -286,18 +295,16 @@ function AppInner() {
         message={message}
         lastResultSuccess={lastResultSuccess}
         scrollOffset={scrollOffset}
-      />
+      />,
     );
   }
 
   if (mode === 'job-list') {
-    return wrapInBorder(
-      <JobListScreen header={header} jobs={jobs} index={index} />
-    );
+    return wrapInBorder(<JobListScreen header={header} jobs={jobs} index={index} />);
   }
 
   if (mode === 'job-detail') {
-    const job = jobs.find(j => j.run.id === selectedJobId);
+    const job = jobs.find((j) => j.run.id === selectedJobId);
     if (!job) {
       return wrapInBorder(
         <Box flexDirection="column">
@@ -305,25 +312,23 @@ function AppInner() {
           <Box marginTop={1}>
             <Text color="red">Job not found</Text>
           </Box>
-        </Box>
+        </Box>,
       );
     }
     const logPaths = getLogPaths(job.run.id);
     return wrapInBorder(
-      <JobDetailScreen 
-        header={header} 
-        job={job} 
+      <JobDetailScreen
+        header={header}
+        job={job}
         scrollOffset={scrollOffset}
         logFilePaths={logPaths}
-        onResume={handleResumeJob}
-        onStartFresh={handleStartFreshJob}
-      />
+      />,
     );
   }
 
   // Select mode
   return wrapInBorder(
-    <SelectScreen header={header} choices={choices} index={index} notice={notice} />
+    <SelectScreen header={header} choices={choices} index={index} notice={notice} />,
   );
 }
 

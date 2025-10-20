@@ -2,13 +2,14 @@ import React from 'react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { render } from 'ink-testing-library';
 import { Text } from 'ink';
-import { UIProvider, useUiState, useUiDispatch, actions } from '../../../src/cli/ui/state/uiStore.js';
+import {
+  UIProvider,
+  useUiState,
+  useUiDispatch,
+  actions,
+} from '../../../src/cli/ui/state/uiStore.js';
 import SelectScreen from '../../../src/cli/ui/screens/SelectScreen.js';
-import { 
-  expectTextInOutput,
-  createTestHeader,
-  mockPipelineChoices
-} from '../testUtils.js';
+import { expectTextInOutput, createTestHeader, mockPipelineChoices } from '../testUtils.js';
 
 describe('UI Integration Tests', () => {
   beforeEach(() => {
@@ -19,7 +20,7 @@ describe('UI Integration Tests', () => {
     it('should provide state and dispatch to components', () => {
       function TestComponent() {
         const state = useUiState();
-        
+
         return (
           <SelectScreen
             header={createTestHeader()}
@@ -33,9 +34,9 @@ describe('UI Integration Tests', () => {
       const result = render(
         <UIProvider cwd="/test">
           <TestComponent />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       expectTextInOutput(result, 'Test Header');
       expectTextInOutput(result, 'Select a pipeline to run:');
       expectTextInOutput(result, 'Simple Task Pipeline');
@@ -45,16 +46,16 @@ describe('UI Integration Tests', () => {
       function TestComponent() {
         const state = useUiState();
         const dispatch = useUiDispatch();
-        
+
         const [hasDispatched, setHasDispatched] = React.useState(false);
-        
+
         React.useEffect(() => {
           if (!hasDispatched) {
             dispatch(actions.navigateDown(2));
             setHasDispatched(true);
           }
         }, [dispatch, hasDispatched]);
-        
+
         return (
           <SelectScreen
             header={createTestHeader()}
@@ -68,9 +69,9 @@ describe('UI Integration Tests', () => {
       const result = render(
         <UIProvider cwd="/test">
           <TestComponent />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       // The state change should eventually reflect in the UI
       // We can check that it doesn't crash and renders content
       expectTextInOutput(result, 'Select a pipeline to run:');
@@ -80,25 +81,29 @@ describe('UI Integration Tests', () => {
       function TestComponent() {
         const state = useUiState();
         const dispatch = useUiDispatch();
-        
+
         const [renderCount, setRenderCount] = React.useState(0);
-        
+
         React.useEffect(() => {
           if (renderCount === 0) {
             dispatch(actions.inputChanged('customPath', '/test/path'));
             setRenderCount(1);
           }
         }, [dispatch, renderCount]);
-        
-        return <Text>CWD: {state.cwd}, CustomPath: {state.customPath}</Text>;
+
+        return (
+          <Text>
+            CWD: {state.cwd}, CustomPath: {state.customPath}
+          </Text>
+        );
       }
 
       const result = render(
         <UIProvider cwd="/test">
           <TestComponent />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       expectTextInOutput(result, 'CWD: /test');
     });
   });
@@ -107,24 +112,24 @@ describe('UI Integration Tests', () => {
     it('should render different screens based on state mode', () => {
       function ConditionalComponent() {
         const state = useUiState();
-        
+
         if (state.mode === 'main-menu') {
           return <Text>Main Menu Mode</Text>;
         }
-        
+
         if (state.mode === 'select') {
           return <Text>Select Mode</Text>;
         }
-        
+
         return <Text>Unknown Mode: {state.mode}</Text>;
       }
 
       const result = render(
         <UIProvider cwd="/test">
           <ConditionalComponent />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       // Should start in main-menu mode
       expectTextInOutput(result, 'Main Menu Mode');
     });
@@ -133,29 +138,25 @@ describe('UI Integration Tests', () => {
       function NoticeTestComponent() {
         const state = useUiState();
         const dispatch = useUiDispatch();
-        
+
         const [initialized, setInitialized] = React.useState(false);
-        
+
         React.useEffect(() => {
           if (!initialized) {
             dispatch(actions.promptCreated('/test/new.md', 'new.md'));
             setInitialized(true);
           }
         }, [dispatch, initialized]);
-        
-        return (
-          <Text>
-            Notice: {state.notice ? state.notice.text : 'none'}
-          </Text>
-        );
+
+        return <Text>Notice: {state.notice ? state.notice.text : 'none'}</Text>;
       }
 
       const result = render(
         <UIProvider cwd="/test">
           <NoticeTestComponent />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       // Should eventually show the notice
       expectTextInOutput(result, 'Notice:');
     });
@@ -167,7 +168,7 @@ describe('UI Integration Tests', () => {
       expect(actions.inputChanged('customPath', '/test')).toEqual({
         type: 'INPUT_CHANGED',
         field: 'customPath',
-        value: '/test'
+        value: '/test',
       });
     });
 
@@ -178,9 +179,9 @@ describe('UI Integration Tests', () => {
         actions.inputChanged('userPrompt', 'test prompt'),
         actions.pipelineCompleted(true, 'Success'),
       ];
-      
+
       // Test that all actions are valid and don't throw
-      actionSequence.forEach(action => {
+      actionSequence.forEach((action) => {
         expect(action).toHaveProperty('type');
         expect(typeof action.type).toBe('string');
       });
@@ -192,28 +193,28 @@ describe('UI Integration Tests', () => {
       function ComponentWithProvider() {
         const dispatch = useUiDispatch();
         const state = useUiState();
-        
+
         // Just verify the hooks work when provider is present
         React.useEffect(() => {
           dispatch(actions.navigateDown(5));
         }, [dispatch]);
-        
+
         return <Text>Mode: {state.mode}</Text>;
       }
 
       const result = render(
         <UIProvider cwd="/test">
           <ComponentWithProvider />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       expectTextInOutput(result, 'Mode: main-menu');
     });
 
     it('should handle complex state interactions', () => {
       function ComplexComponent() {
         const state = useUiState();
-        
+
         return (
           <Text>
             CWD: {state.cwd}, InitialMode: {state.mode}
@@ -224,9 +225,9 @@ describe('UI Integration Tests', () => {
       const result = render(
         <UIProvider cwd="/test/path">
           <ComplexComponent />
-        </UIProvider>
+        </UIProvider>,
       );
-      
+
       // Just verify it renders and shows the initial state
       expectTextInOutput(result, 'CWD: /test/path');
       expectTextInOutput(result, 'InitialMode: main-menu');

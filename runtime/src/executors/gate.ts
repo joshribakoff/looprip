@@ -19,36 +19,32 @@ export class GateExecutor implements NodeExecutor {
   async execute(
     node: GateNode,
     state: PipelineState,
-    context: ExecutionContext
+    context: ExecutionContext,
   ): Promise<NodeOutput> {
     const startTime = Date.now();
-    
+
     try {
       // Interpolate command with current state
       const command = this.templateEngine.interpolate(node.command, state);
-      
+
       this.logger.gateCheck(command);
-      
+
       // Execute the command
-      await this.runCommand(
-        command,
-        context.workingDirectory,
-        context.environment
-      );
-      
+      await this.runCommand(command, context.workingDirectory, context.environment);
+
       const endTime = Date.now();
-      
+
       return {
         nodeId: node.id,
         type: 'gate',
         success: true,
         startTime,
         endTime,
-        duration: endTime - startTime
+        duration: endTime - startTime,
       };
     } catch (error: any) {
       const endTime = Date.now();
-      
+
       return {
         nodeId: node.id,
         type: 'gate',
@@ -56,22 +52,18 @@ export class GateExecutor implements NodeExecutor {
         error: node.message || error.message,
         startTime,
         endTime,
-        duration: endTime - startTime
+        duration: endTime - startTime,
       };
     }
   }
 
-  private runCommand(
-    command: string,
-    cwd: string,
-    env: Record<string, string>
-  ): Promise<void> {
+  private runCommand(command: string, cwd: string, env: Record<string, string>): Promise<void> {
     return new Promise((resolve, reject) => {
       const child = spawn(command, {
         cwd,
         env: { ...process.env, ...env },
         shell: true,
-        stdio: 'inherit'
+        stdio: 'inherit',
       });
 
       child.on('close', (code) => {
